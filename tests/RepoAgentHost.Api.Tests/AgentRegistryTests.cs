@@ -76,6 +76,180 @@ public sealed class AgentRegistryTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CatalogMembershipsShareOneRuntimeAndSurviveRestart()
+    {
+        var registry = CreateRegistry();
+        await registry.StartAsync(CancellationToken.None);
+        var runtime = _runtimes["portfolio"];
+        var handler = registry.GetHandler("portfolio");
+        await handler.SendMessageAsync(Request("remember", "caller"), CancellationToken.None);
+        var view = await registry.AddAsync(new(InitialWorkspace, Catalog: "support"), CancellationToken.None);
+        Assert.Equal(new[] { "default", "support" }, view.Catalogs);
+        Assert.Same(runtime, _runtimes["portfolio"]);
+        Assert.Same(handler, registry.GetHandler("portfolio"));
+        Assert.Single(runtime.History);
+        await registry.AddAsync(new(InitialWorkspace, Catalog: "support"), CancellationToken.None);
+        Assert.Single(registry.List("support"));
+        await registry.RemoveAsync("portfolio", CancellationToken.None, "default");
+        Assert.Empty(registry.List("default"));
+        Assert.Single(registry.List("support"));
+        Assert.False(runtime.Disposed);
+        await registry.DisposeAsync();
+        var restarted = CreateRegistry();
+        await restarted.StartAsync(CancellationToken.None);
+        Assert.Empty(restarted.List("default"));
+        Assert.Equal("portfolio", Assert.Single(restarted.List("support")).Id);
+        await restarted.RemoveAsync("portfolio", CancellationToken.None, "support");
+        Assert.Empty(restarted.List("support"));
+        Assert.Single(restarted.List());
+        Assert.NotNull(restarted.GetCard("portfolio"));
+        await restarted.RemoveAsync("portfolio", CancellationToken.None);
+        Assert.Empty(restarted.List());
+    }
+
+    [Fact]
+    public async Task GlobalRemovalRemovesMembershipFromEveryCatalog()
+    {
+        var registry = CreateRegistry();
+        await registry.StartAsync(CancellationToken.None);
+        await registry.AddAsync(new(InitialWorkspace, Catalog: "support"), CancellationToken.None);
+        await registry.RemoveAsync("portfolio", CancellationToken.None);
+        Assert.Empty(registry.List("default"));
+        Assert.Empty(registry.List("support"));
+        Assert.True(_runtimes["portfolio"].Disposed);
+    }
+
+    [Fact]
+    public async Task MissingCatalogsAndNonmembersFailWithoutChangingRegistrations()
+    {
+        var registry = CreateRegistry();
+        await registry.StartAsync(CancellationToken.None);
+        Assert.Equal(404, Assert.Throws<AgentRegistryException>(() => registry.List("missing")).StatusCode);
+        Assert.Equal(404, Assert.Throws<AgentRegistryException>(() => registry.Catalog("missing")).StatusCode);
+        await registry.AddAsync(new(CreateWorkspace("Other"), Catalog: "support"), CancellationToken.None);
+        Assert.Equal(404, (await Assert.ThrowsAsync<AgentRegistryException>(() =>
+            registry.RemoveAsync("portfolio", CancellationToken.None, "support"))).StatusCode);
+        Assert.Equal(2, registry.List().Count);
+    }
+
+    [Fact]
+    public async Task CatalogMembershipCannotChangeAnAgentsWorkspaceOrPersona()
+    {
+        var registry = CreateRegistry();
+        await registry.StartAsync(CancellationToken.None);
+        await Assert.ThrowsAsync<AgentRegistryException>(() => registry.AddAsync(
+            new(CreateWorkspace("Other"), "portfolio", Catalog: "support"), CancellationToken.None));
+        await Assert.ThrowsAsync<AgentRegistryException>(() => registry.AddAsync(
+            new(InitialWorkspace, Persona: "margo", Catalog: "support"), CancellationToken.None));
+        Assert.Single(registry.List());
+    }
+
+    [Fact]
+    public async Task LegacyRegistryIsMigratedInPlaceWithoutChangingIdentity()
+    {
+        Directory.CreateDirectory(StateDirectory);
+        var hostId = Guid.NewGuid().ToString("N");
+        var path = Path.Combine(StateDirectory, "agents.json");
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new
+        {
+            hostId,
+            agents = new[] { new { id = "portfolio", workspacePath = InitialWorkspace } }
+        }));
+        var registry = CreateRegistry();
+        await registry.StartAsync(CancellationToken.None);
+        using var saved = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        Assert.Equal(hostId, saved.RootElement.GetProperty("hostId").GetString());
+        Assert.Equal("portfolio", saved.RootElement.GetProperty("catalogs").GetProperty("default")[0].GetString());
+        Assert.Single(registry.List("default"));
+    }
+
+    [Fact]
+    public async Task ExplicitConfigStoresPortAndMembershipsAndIsLockedAgainstAnotherHost()
+    {
+        var config = Path.Combine(_root, "configuration", "host.json");
+        AgentRegistry NewRegistry()
+        {
+            var registry = new AgentRegistry(null, StateDirectory, [], "http://127.0.0.1:5081",
+                (registration, _) => new FakeRuntime(registration.Id, false), NullLoggerFactory.Instance, config, 5081);
+            _registries.Add(registry);
+            return registry;
+        }
+        var first = NewRegistry();
+        await first.StartAsync(CancellationToken.None);
+        await first.AddAsync(new(InitialWorkspace, Catalog: "support"), CancellationToken.None);
+        using var saved = JsonDocument.Parse(await File.ReadAllTextAsync(config));
+        Assert.Equal(5081, saved.RootElement.GetProperty("port").GetInt32());
+        Assert.True(saved.RootElement.GetProperty("catalogs").TryGetProperty("support", out _));
+        Assert.False(File.Exists(Path.Combine(StateDirectory, "agents.json")));
+        await Assert.ThrowsAsync<IOException>(() => NewRegistry().StartAsync(CancellationToken.None));
+        await first.DisposeAsync();
+        var restarted = NewRegistry();
+        await restarted.StartAsync(CancellationToken.None);
+        Assert.Single(restarted.List("support"));
+    }
+
+    [Fact]
+    public async Task InvalidCatalogReferencesAreRejectedBeforeStartingAgents()
+    {
+        Directory.CreateDirectory(StateDirectory);
+        await File.WriteAllTextAsync(Path.Combine(StateDirectory, "agents.json"), JsonSerializer.Serialize(new
+        {
+            hostId = Guid.NewGuid().ToString("N"),
+            agents = Array.Empty<object>(),
+            catalogs = new { support = new[] { "missing-agent" } }
+        }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateRegistry().StartAsync(CancellationToken.None));
+        Assert.Empty(_runtimes);
+    }
+
+    [Theory]
+    [InlineData("add", "workspace", "--catalog", "support")]
+    [InlineData("--catalog", "support", "add", "workspace")]
+    [InlineData("list", "--catalog", "support")]
+    [InlineData("remove", "portfolio", "--catalog", "support")]
+    public void CliCatalogOptionWorksOnRegistrationAndMembershipCommands(params string[] arguments)
+    {
+        Assert.Equal("support", AgentAdmin.ParseCommand(arguments).Catalog);
+    }
+
+    [Theory]
+    [InlineData("stop", "--catalog", "support")]
+    [InlineData("list", "--catalog")]
+    [InlineData("list", "--catalog", "../support")]
+    [InlineData("list", "--catalog", "support", "--catalog", "other")]
+    public void InvalidCatalogOptionsAreRejected(params string[] arguments)
+    {
+        Assert.Throws<AgentRegistryException>(() => AgentAdmin.ParseCommand(arguments));
+    }
+
+    [Fact]
+    public void ConfigAndPortOptionsAreRemovedAndConfigSelectsHostPort()
+    {
+        var config = Path.Combine(_root, "host.json");
+        File.WriteAllText(config, """{"port":5099}""");
+        var options = RepoAgentHost.Api.HostOptions.Parse(["--config", config, "list", "--catalog", "support"]);
+        Assert.Equal(5099, options.Port);
+        Assert.Equal(new[] { "list", "--catalog", "support" }, options.Arguments);
+        Assert.Equal(config + ".state", options.StateDirectory);
+        Assert.Equal(5100, RepoAgentHost.Api.HostOptions.Parse(["start", "--port", "5100", "--config", config]).Port);
+        Assert.NotEqual(AgentAdmin.PipeName(5099), AgentAdmin.PipeName(5099, config));
+        Assert.NotEqual(AgentAdmin.PipeName(5099, config), AgentAdmin.PipeName(5099, config + "other"));
+    }
+
+    [Theory]
+    [InlineData("start", "--port", "0")]
+    [InlineData("start", "--port", "65536")]
+    [InlineData("start", "--port", "abc")]
+    [InlineData("start", "--config")]
+    [InlineData("start", "--config", "")]
+    [InlineData("start", "--config", "one", "--config", "two")]
+    [InlineData("start", "--port", "5080", "--port", "5081")]
+    public void InvalidCommonOptionsAreRejected(params string[] arguments)
+    {
+        Assert.Throws<AgentRegistryException>(() => RepoAgentHost.Api.HostOptions.Parse(arguments));
+    }
+
+    [Fact]
     public async Task HostWithoutInitialWorkspacePersistsEmptyRegistryAndRestoresRegistrations()
     {
         AgentRegistry NewRegistry()
@@ -243,6 +417,17 @@ public sealed class AgentRegistryTests : IAsyncLifetime
             Assert.Equal(restTaskId, (await restClient.GetTaskAsync(new GetTaskRequest { Id = restTaskId }, CancellationToken.None)).Id);
             var catalog = await http.GetAsync("/catalog");
             Assert.Equal("application/ai-catalog+json", catalog.Content.Headers.ContentType?.MediaType);
+            await registry.AddAsync(new(Path.Combine(_root, "Dynamic"), Catalog: "support"), CancellationToken.None);
+            await registry.AddAsync(new(Path.Combine(_root, "Dynamic"), Catalog: "engineering"), CancellationToken.None);
+            foreach (var name in new[] { "support", "engineering" })
+            {
+                var named = await http.GetAsync("/catalogs/" + name);
+                Assert.Equal("application/ai-catalog+json", named.Content.Headers.ContentType?.MediaType);
+                using var namedJson = JsonDocument.Parse(await named.Content.ReadAsStringAsync());
+                var entry = Assert.Single(namedJson.RootElement.GetProperty("entries").EnumerateArray());
+                Assert.EndsWith("/agents/dynamic/.well-known/agent-card.json", entry.GetProperty("url").GetString());
+            }
+            Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync("/catalogs/missing")).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync("/admin/agents")).StatusCode);
             await registry.RemoveAsync("dynamic", CancellationToken.None);
             Assert.Equal(HttpStatusCode.NotFound,

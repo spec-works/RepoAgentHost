@@ -214,6 +214,34 @@ rahcli start
 Set the same port in the control-command terminal. Current workspaces must be local Git
 repositories; URL cloning is not implemented. Paths through junctions/symbolic links are rejected.
 
+### Named catalogs and explicit configuration
+
+One host exposes multiple catalogs at `/catalogs/{name}` on the same port. `/catalog` aliases
+`/catalogs/default`. Agents remain host-wide at `/agents/{id}` and can appear in several catalogs
+without creating separate runtimes, sessions, or task stores. Membership is not access control.
+
+All commands accept `--config <json-path>` and `--port <port>`. The JSON file persists host ID,
+port, agent registrations, and catalog memberships. Startup creates it if absent. An explicit port
+overrides the file and is persisted; otherwise the file overrides the port environment variable.
+Runtime state and logs use `<config-path>.state`. Always pass the same config path when managing
+that host. Legacy defaults remain supported; configurations without memberships migrate to `default`.
+Stop before manually editing the file; restart loads edits. Selecting a different config does not
+automatically move saved sessions.
+
+```powershell
+rahcli start --config "D:\agents\host.json" --port 5081 --background
+rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
+rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
+rahcli list --catalog support --config "D:\agents\host.json"
+```
+
+`add` with the same workspace/ID and an explicit catalog adds membership idempotently, without
+changing persona or history. New agents without `--catalog` join `default`.
+`remove <id> --catalog <name>` removes only membership, leaving the agent callable even if no
+catalog references it. `remove <id>` unregisters it globally. `list` returns all agents including
+their catalog memberships. Catalog names follow the agent-ID rules; adding creates catalogs and
+empty catalogs are retained. Independent processes still require different ports.
+
 ## Discover agents through AI Catalog
 
 ```powershell

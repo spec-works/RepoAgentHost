@@ -18,11 +18,14 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
     private readonly ILogger<AgentRegistry> _logger;
     private FileStream? _registryLock;
     private string _hostId = "";
+    private readonly string _statePath;
+    private readonly int? _port;
+    private volatile Dictionary<string, string[]> _catalogs = new(StringComparer.Ordinal);
     private bool _stopped;
 
     public AgentRegistry(string? initialWorkspace, string stateDirectory, IEnumerable<string> allowedRoots,
         string baseUrl, Func<AgentRegistration, RepositoryKnowledge, IHostedAgentRuntime> factory,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory, string? configPath = null, int? port = null)
     {
         _initialWorkspace = initialWorkspace is null ? null : NormalizePath(initialWorkspace);
         _stateDirectory = Path.GetFullPath(stateDirectory);
@@ -31,29 +34,49 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         _factory = factory;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<AgentRegistry>();
+        _statePath = configPath is null ? Path.Combine(_stateDirectory, "agents.json") : Path.GetFullPath(configPath);
+        _port = port;
     }
 
-    private string StatePath => Path.Combine(_stateDirectory, "agents.json");
+    private string StatePath => _statePath;
     private static StringComparison PathComparison =>
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_stateDirectory);
+        Directory.CreateDirectory(Path.GetDirectoryName(StatePath)!);
         _registryLock = new FileStream(StatePath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         try
         {
             var existingState = File.Exists(StatePath);
             var state = existingState
-                ? JsonSerializer.Deserialize<RegistryState>(
+                ? JsonSerializer.Deserialize<HostConfiguration>(
                     await File.ReadAllTextAsync(StatePath, cancellationToken), JsonOptions)
                     ?? throw new InvalidOperationException("Agent registry state is null.")
-                : new RegistryState(Guid.NewGuid().ToString("N"), []);
+                : new HostConfiguration(Guid.NewGuid().ToString("N"), []);
             if (!Guid.TryParseExact(state.HostId, "N", out _) || state.Agents is null)
             {
                 throw new InvalidOperationException("Agent registry state is invalid.");
             }
             _hostId = state.HostId;
+            _catalogs = state.Catalogs ?? new Dictionary<string, string[]>
+            {
+                ["default"] = state.Agents.Select(a => a.Id).ToArray()
+            };
+            foreach (var (name, members) in _catalogs)
+            {
+                AgentIds.Validate(name);
+                if (members is null || members.Distinct().Count() != members.Length
+                    || members.Any(id => !state.Agents.Any(a => a.Id == id)))
+                {
+                    throw new InvalidOperationException("Catalog memberships are invalid.");
+                }
+            }
+            if (!_catalogs.ContainsKey("default"))
+            {
+                _catalogs = new Dictionary<string, string[]>(_catalogs) { ["default"] = [] };
+            }
             foreach (var registration in state.Agents)
             {
                 AgentIds.Validate(registration.Id);
@@ -64,7 +87,7 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
                 if (_agents.ContainsKey(registration.Id) || _agents.Values.Any(
                     a => a.Registration.WorkspacePath.Equals(NormalizePath(registration.WorkspacePath), PathComparison)))
                 {
-                    throw new InvalidOperationException("Agent registry contains duplicate IDs or workspace paths.");
+                    throw new InvalidOperationException("Agent registry contains duplicate IDs or repository paths.");
                 }
                 var normalized = registration with { WorkspacePath = NormalizePath(registration.WorkspacePath) };
                 _agents[registration.Id] = await StartAgentAsync(normalized, cancellationToken);
@@ -80,6 +103,11 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
                     await SaveAsync([], cancellationToken);
                 }
             }
+            else if (state.Catalogs is null || !state.Catalogs.ContainsKey("default")
+                || (_port is not null && state.Port != _port))
+            {
+                await SaveAsync(_agents.Values.Select(a => a.Registration), cancellationToken);
+            }
         }
         catch
         {
@@ -88,13 +116,17 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         }
     }
 
-    public IReadOnlyList<AgentRegistrationView> List() => _agents.Values
-        .OrderBy(a => a.Registration.Id, StringComparer.Ordinal)
-        .Select(View).ToArray();
+    public IReadOnlyList<AgentRegistrationView> List(string? catalog = null)
+    {
+        var members = catalog is null ? null : RequireCatalog(catalog);
+        return _agents.Values.Where(a => members is null || members.Contains(a.Registration.Id))
+            .OrderBy(a => a.Registration.Id, StringComparer.Ordinal).Select(View).ToArray();
+    }
 
     private AgentRegistrationView View(HostedAgent agent) => new(
         agent.Registration.Id, agent.Registration.WorkspacePath, agent.Status, agent.Error,
-        $"{_baseUrl}/agents/{agent.Registration.Id}/.well-known/agent-card.json", agent.Registration.Persona);
+        $"{_baseUrl}/agents/{agent.Registration.Id}/.well-known/agent-card.json", agent.Registration.Persona,
+        _catalogs.Where(c => c.Value.Contains(agent.Registration.Id)).Select(c => c.Key).Order().ToArray());
 
     public AgentCard GetCard(string id) => RequireReady(id).Card
         ?? throw new InvalidOperationException("Ready agent has no card.");
@@ -115,30 +147,42 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         return agent;
     }
 
-    public object Catalog() => new
+    private string[] RequireCatalog(string name)
     {
-        specVersion = "1.0",
-        host = new { identifier = $"urn:agentdock:host:{_hostId}", displayName = "RepoAgentHost" },
-        entries = _agents.Values.Where(a => a.Status == "ready").OrderBy(a => a.Registration.Id)
-            .Select(a => new
-            {
-                identifier = $"urn:agentdock:{_hostId}:agent:{a.Registration.Id}",
-                displayName = a.Card!.Name,
-                description = a.Card.Description,
-                type = "application/a2a-agent-card+json",
-                tags = new[] { a.Registration.Id, "agent", "knowledge", "skills", "tools" },
-                url = View(a).CardUrl
-            }).ToArray()
-    };
+        AgentIds.Validate(name);
+        return _catalogs.TryGetValue(name, out var members) ? members
+            : throw new AgentRegistryException(404, $"Catalog '{name}' does not exist.");
+    }
+
+    public object Catalog(string name = "default")
+    {
+        var members = RequireCatalog(name);
+        return new
+        {
+            specVersion = "1.0",
+            host = new { identifier = $"urn:agentdock:host:{_hostId}", displayName = "RepoAgentHost" },
+            entries = _agents.Values.Where(a => a.Status == "ready" && members.Contains(a.Registration.Id))
+                .OrderBy(a => a.Registration.Id).Select(a => new
+                {
+                    identifier = $"urn:agentdock:{_hostId}:agent:{a.Registration.Id}",
+                    displayName = a.Card!.Name,
+                    description = a.Card.Description,
+                    type = "application/a2a-agent-card+json",
+                    tags = new[] { a.Registration.Id, "agent", "knowledge", "skills", "tools" },
+                    url = View(a).CardUrl
+                }).ToArray()
+        };
+    }
 
     public async Task<AgentRegistrationView> AddAsync(RegisterAgentRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.WorkspacePath))
         {
-            throw new AgentRegistryException(400, "A workspacePath is required.");
+            throw new AgentRegistryException(400, "A repository path is required.");
         }
         var path = NormalizePath(request.WorkspacePath);
         var id = request.Id is null ? AgentIds.FromWorkspace(path) : AgentIds.Validate(request.Id);
+        var catalog = AgentIds.Validate(request.Catalog ?? "default");
         if (request.Persona is not null)
         {
             PersonaNames.Validate(request.Persona);
@@ -151,19 +195,28 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         try
         {
             ObjectDisposedException.ThrowIf(_stopped, this);
-            if (_agents.ContainsKey(id))
+            if (_agents.TryGetValue(id, out var existing))
             {
+                if (request.Catalog is not null && existing.Registration.WorkspacePath.Equals(path, PathComparison)
+                    && (request.Persona is null || request.Persona == existing.Registration.Persona))
+                {
+                    var memberships = WithMembership(catalog, id);
+                    await SaveAsync(_agents.Values.Select(a => a.Registration), cancellationToken, memberships);
+                    _catalogs = memberships;
+                    return View(existing);
+                }
                 throw new AgentRegistryException(409, $"Agent ID '{id}' is already registered. Supply a different ID.");
             }
             if (_agents.Values.Any(a => a.Registration.WorkspacePath.Equals(path, PathComparison)))
             {
-                throw new AgentRegistryException(409, "This workspace is already registered.");
+                throw new AgentRegistryException(409, "This repository folder is already registered.");
             }
             var registration = new AgentRegistration(id, path, request.Persona);
             var agent = await StartAgentAsync(registration, cancellationToken);
+            var catalogs = WithMembership(catalog, id);
             try
             {
-                await SaveAsync(_agents.Values.Select(a => a.Registration).Append(registration), cancellationToken);
+                await SaveAsync(_agents.Values.Select(a => a.Registration).Append(registration), cancellationToken, catalogs);
             }
             catch
             {
@@ -171,6 +224,7 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
                 throw;
             }
             _agents[id] = agent;
+            _catalogs = catalogs;
             return View(agent);
         }
         finally
@@ -179,7 +233,13 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         }
     }
 
-    public async Task RemoveAsync(string id, CancellationToken cancellationToken)
+    private Dictionary<string, string[]> WithMembership(string catalog, string id) =>
+        new(_catalogs, StringComparer.Ordinal)
+        {
+            [catalog] = (_catalogs.GetValueOrDefault(catalog) ?? []).Append(id).Distinct().Order().ToArray()
+        };
+
+    public async Task RemoveAsync(string id, CancellationToken cancellationToken, string? catalog = null)
     {
         await _changes.WaitAsync(cancellationToken);
         try
@@ -188,12 +248,29 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
             {
                 throw new AgentRegistryException(404, $"Agent '{id}' is not registered.");
             }
+            if (catalog is not null)
+            {
+                var members = RequireCatalog(catalog);
+                if (!members.Contains(id))
+                {
+                    throw new AgentRegistryException(404, $"Agent '{id}' is not in catalog '{catalog}'.");
+                }
+                var catalogs = new Dictionary<string, string[]>(_catalogs)
+                {
+                    [catalog] = members.Where(member => member != id).ToArray()
+                };
+                await SaveAsync(_agents.Values.Select(a => a.Registration), cancellationToken, catalogs);
+                _catalogs = catalogs;
+                return;
+            }
             agent.Status = "stopping";
             try
             {
                 await agent.DisposeRuntimeAsync();
-                await SaveAsync(_agents.Values.Where(a => a != agent).Select(a => a.Registration), CancellationToken.None);
+                var catalogs = _catalogs.ToDictionary(c => c.Key, c => c.Value.Where(member => member != id).ToArray());
+                await SaveAsync(_agents.Values.Where(a => a != agent).Select(a => a.Registration), CancellationToken.None, catalogs);
                 _agents.TryRemove(id, out _);
+                _catalogs = catalogs;
             }
             catch (Exception exception)
             {
@@ -254,13 +331,13 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         if (_allowedRoots.Length != 0 && !_allowedRoots.Any(root => path.Equals(root, PathComparison)
             || path.StartsWith(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar, PathComparison)))
         {
-            throw new AgentRegistryException(403, "The workspace is outside the configured allowed roots.");
+            throw new AgentRegistryException(403, "The repository folder is outside the configured allowed roots.");
         }
         for (var directory = new DirectoryInfo(path); directory is not null; directory = directory.Parent)
         {
             if (directory.Exists && directory.Attributes.HasFlag(FileAttributes.ReparsePoint))
             {
-                throw new AgentRegistryException(400, "Workspace paths through symbolic links or junctions are not supported.");
+                throw new AgentRegistryException(400, "Repository paths through symbolic links or junctions are not supported.");
             }
         }
     }
@@ -269,14 +346,15 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
     {
         if (!Path.IsPathFullyQualified(path))
         {
-            throw new AgentRegistryException(400, "Workspace paths must be absolute.");
+            throw new AgentRegistryException(400, "Repository paths must be absolute.");
         }
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
     }
 
-    private async Task SaveAsync(IEnumerable<AgentRegistration> registrations, CancellationToken cancellationToken)
+    private async Task SaveAsync(IEnumerable<AgentRegistration> registrations, CancellationToken cancellationToken,
+        Dictionary<string, string[]>? catalogs = null)
     {
-        var state = new RegistryState(_hostId, registrations.OrderBy(a => a.Id).ToArray());
+        var state = new HostConfiguration(_hostId, registrations.OrderBy(a => a.Id).ToArray(), catalogs ?? _catalogs, _port);
         await File.WriteAllTextAsync(StatePath + ".tmp", JsonSerializer.Serialize(state, JsonOptions), cancellationToken);
         File.Move(StatePath + ".tmp", StatePath, overwrite: true);
     }
@@ -319,8 +397,6 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
     }
 
     public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);
-
-    private sealed record RegistryState(string HostId, AgentRegistration[] Agents);
 
     private sealed class HostedAgent(AgentRegistration registration)
     {

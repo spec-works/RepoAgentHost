@@ -45,10 +45,10 @@ public static class HostCommands
 
     private static string ValidatePath(string path) =>
         !string.IsNullOrWhiteSpace(path) ? Path.GetFullPath(path)
-            : throw new AgentRegistryException(400, "A workspace path cannot be empty.");
+            : throw new AgentRegistryException(400, "A repository path cannot be empty.");
 
     public static async Task<int> StartBackgroundAsync(string? workspacePath, int port,
-        string pipeName, string stateDirectory)
+        string pipeName, string stateDirectory, string? configPath = null)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -67,6 +67,13 @@ public static class HostCommands
             start.ArgumentList.Add(Assembly.GetEntryAssembly()!.Location);
         }
         start.ArgumentList.Add("start");
+        start.ArgumentList.Add("--port");
+        start.ArgumentList.Add(port.ToString());
+        if (configPath is not null)
+        {
+            start.ArgumentList.Add("--config");
+            start.ArgumentList.Add(configPath);
+        }
         if (workspacePath is not null)
         {
             start.ArgumentList.Add(workspacePath);

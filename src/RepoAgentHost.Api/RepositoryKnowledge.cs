@@ -43,7 +43,7 @@ public sealed class RepositoryKnowledge
 
         if (!File.Exists(Path.Combine(_rootPath, ".git")) && !Directory.Exists(Path.Combine(_rootPath, ".git")))
         {
-            throw new InvalidOperationException($"Configured path is not a supported workspace: {_rootPath}");
+            throw new InvalidOperationException($"Configured path is not a supported repository folder: {_rootPath}");
         }
     }
 

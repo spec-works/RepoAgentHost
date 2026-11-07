@@ -14,12 +14,10 @@ if (args is ["--version"])
     return;
 }
 
-var portValue = Environment.GetEnvironmentVariable("REPOSITORY_AGENT_PORT") ?? "5080";
-if (!int.TryParse(portValue, out var port) || port is < 1 or > 65535)
-{
-    throw new InvalidOperationException("REPOSITORY_AGENT_PORT must be a valid TCP port.");
-}
-var pipeName = AgentAdmin.PipeName(port);
+var hostOptions = RepoAgentHost.Api.HostOptions.Parse(args);
+args = hostOptions.Arguments;
+var port = hostOptions.Port;
+var pipeName = AgentAdmin.PipeName(port, hostOptions.ConfigPath);
 if (args.Length > 0 && args[0] is "add" or "remove" or "stop" or "list")
 {
     Environment.ExitCode = await AgentAdmin.RunCommandAsync(args, pipeName);
@@ -35,13 +33,14 @@ var (workspaceArgument, background) = HostCommands.ParseStart(args);
 var initialWorkspace = workspaceArgument is null ? null : Path.TrimEndingDirectorySeparator(workspaceArgument);
 var builder = WebApplication.CreateBuilder([]);
 var baseUrl = $"http://127.0.0.1:{port}";
-var stateDirectory = builder.Configuration["REPOAGENT_STATE_DIRECTORY"]
+var stateDirectory = hostOptions.StateDirectory ?? builder.Configuration["REPOAGENT_STATE_DIRECTORY"]
     ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "AgentDock", "hosts", $"port-{port}");
 stateDirectory = Path.GetFullPath(stateDirectory);
 if (background)
 {
-    Environment.ExitCode = await HostCommands.StartBackgroundAsync(initialWorkspace, port, pipeName, stateDirectory);
+    Environment.ExitCode = await HostCommands.StartBackgroundAsync(initialWorkspace, port, pipeName, stateDirectory,
+        hostOptions.ConfigPath);
     return;
 }
 using var backgroundLog = backgroundWorker
@@ -62,7 +61,7 @@ builder.Services.AddSingleton(provider => new AgentRegistry(
     (registration, knowledge) => new CopilotAgentService(knowledge, builder.Configuration,
         provider.GetRequiredService<ILoggerFactory>().CreateLogger<CopilotAgentService>(),
         registration.Id, stateDirectory, provider.GetRequiredService<SharedCopilotRuntime>(), registration.Persona),
-    provider.GetRequiredService<ILoggerFactory>()));
+    provider.GetRequiredService<ILoggerFactory>(), hostOptions.ConfigPath, port));
 builder.Services.AddHostedService(provider => provider.GetRequiredService<AgentRegistry>());
 builder.Services.AddHostedService(provider => new AgentAdmin(
     provider.GetRequiredService<AgentRegistry>(), pipeName, provider.GetRequiredService<ILogger<AgentAdmin>>(),

@@ -179,6 +179,57 @@ Use the same `REPOSITORY_AGENT_PORT` for host and CLI commands. Separate ports a
 hosts. `REPOAGENT_STATE_DIRECTORY` overrides the host's registry and session-state directory;
 one process may own a registry directory at a time.
 
+### Named catalogs and a configurable registry
+
+One host can expose multiple catalogs on the same port. Agents are registered once at
+`/agents/{id}`; catalogs reference those shared agents and do not create additional sessions.
+`/catalogs/{name}` serves a named AI Catalog document. `/catalog` remains an alias for
+`/catalogs/default`. Catalog names follow the same lowercase hyphen-separated rules as agent IDs.
+
+Use `--config` on every command to select a JSON configuration file. `start` creates it if
+missing; `add` and `remove` persist agent registrations and memberships there. `--port` overrides
+the file's port and is saved by the host on startup. Otherwise the file's port takes precedence
+over `REPOSITORY_AGENT_PORT`, with `5080` as the fallback.
+
+```powershell
+rahcli start --config "D:\agents\host.json" --port 5081 --background
+rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
+rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
+rahcli list --catalog support --config "D:\agents\host.json"
+rahcli remove work-iq-support --catalog support --config "D:\agents\host.json"
+rahcli stop --config "D:\agents\host.json"
+```
+
+Both catalogs advertise the same card URL and stable agent identifier. Repeating `add` with the
+same workspace/ID and `--catalog` adds membership without replacing its runtime or history;
+it cannot change the agent's workspace or persona. Without `--catalog`, new registrations join
+`default`, and duplicate registrations remain errors.
+
+`remove <id> --catalog <name>` removes only membership. Even after the last membership is removed,
+the agent stays registered and callable at its known URL. `remove <id>` unregisters it everywhere.
+`list` shows all agents with their catalog names; `list --catalog <name>` filters membership.
+Named catalogs are created by `add --catalog` and remain available when empty. Unknown catalogs
+return an error, and failed agents are not advertised.
+
+The generated configuration contains `hostId`, `port`, `agents`, and `catalogs` (catalog names
+mapped to arrays of agent IDs). Existing configurations without `catalogs` are migrated in place
+to `default`, preserving host and agent identities. Stop the host before manually editing the
+file; edits are loaded on restart, not watched live.
+
+With explicit `--config`, runtime state and background logs live in `<config-path>.state`, and a
+`<config-path>.lock` file prevents concurrent ownership. Without `--config`, legacy state paths
+remain unchanged. Selecting a different configuration starts a separate deployment; existing
+session files are not automatically moved to its state directory. Independent host processes
+still require different ports. The management pipe includes the selected config identity so a
+command cannot accidentally manage a different configuration on the same port.
+
+The development wrapper accepts `-Config`, `-Port`, and `-Catalog`, for example:
+
+```powershell
+.\run.ps1 -Command start -Config "D:\agents\host.json" -Port 5081 -Background
+.\run.ps1 -Command list -Config "D:\agents\host.json" -Catalog support
+```
+
 ## Publish a Windows ARM64 binary
 
 On the Windows ARM64 development machine, publish a self-contained executable:

@@ -22,7 +22,7 @@ detaches it on Windows and writes `host.log` in the state directory. No OS servi
 `serve` remains a foreground alias. `stop` shuts down the host and all agents without removing
 their saved registrations or sessions.
 
-`add <workspace> [--id <id>] [--persona <name>]`, `list`, `remove <id>`, and `stop` control the running host
+`add <repository-path> [--id <id>] [--persona <name>]`, `list`, `remove <id>`, and `stop` control the running host
 through a same-user named pipe. Registrations persist independently of process lifetime.
 The workspace basename supplies a default lowercase hyphen-separated ID. Duplicate IDs or workspace
 paths are rejected. Explicit IDs contain 1-64 lowercase ASCII letters/digits separated by single
@@ -33,11 +33,25 @@ before inference on first work. Missing personas fail explicitly.
 It does not delete workspace files or saved session state. Restart does not restore removed
 registrations. Failed registrations are visible to management but excluded from the public catalog.
 
+Agents are host-wide and catalogs are membership lists, not runtime owners. `add ... --catalog <name>`
+creates a catalog or adds the matching existing agent to it without replacing its session.
+`remove <id> --catalog <name>` removes only membership; the agent remains registered even with no
+memberships. `remove <id>` unregisters it from all catalogs. `list --catalog <name>` filters agents.
+Without a catalog option, new registrations join `default` and `list` returns all agents.
+
+All commands accept `--config <json-path>` and `--port <port>`. The config persists host identity,
+port, agents, and catalog memberships. Startup creates a missing file; legacy registrations migrate
+to `default`. The host exclusively locks the config and updates it atomically for management changes.
+Manual edits require a restart. An explicit config stores runtime state in `<config-path>.state`;
+without one the legacy state directory remains in use. Management targets both port and config
+identity. Background startup propagates those choices to its child process.
+
 ## Discovery and transport
 
 | Surface | Contract |
 |---|---|
-| `GET /catalog` | Live `application/ai-catalog+json` listing ready agents |
+| `GET /catalog` | Default catalog alias |
+| `GET /catalogs/{name}` | Live `application/ai-catalog+json` listing ready members; unknown names return 404 |
 | `GET /agents/{id}` | Direct agent card |
 | `GET /agents/{id}/.well-known/agent-card.json` | Agent card discovery |
 | `/agents/{id}` | Preferred HTTP+JSON A2A binding, including SSE |
@@ -48,6 +62,8 @@ Catalog entries point to agent cards using `application/a2a-agent-card+json`. Id
 the persisted host identity and agent ID. Cards take descriptive identity from workspace
 `.agent/agent-profile.json`, then README fallback. Descriptive identity, registration ID, selected
 persona, and session ID are distinct.
+An agent in several catalogs has the same identifier, card URL, receiving session, and task store
+in each. Membership is discovery configuration, not an authorization boundary.
 
 Root A2A aliases exist only when an initial workspace is explicitly provided to `start` or `serve`.
 Without one, callers discover through the catalog; no default is inferred from list order.

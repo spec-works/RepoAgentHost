@@ -104,7 +104,7 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
             _legacyLock = null;
             throw;
         }
-        _logger.LogInformation("Registered workspace {RepositoryRoot}; Copilot session will load on demand", _repository.RootPath);
+        _logger.LogInformation("Registered repository folder {RepositoryRoot}; Copilot session will load on demand", _repository.RootPath);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -330,7 +330,7 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
             }
             catch (IOException exception) when (exception.InnerException is RemoteRpcException)
             {
-                _logger.LogError(exception, "Unable to select persona {Persona} for workspace {Workspace}", _persona, _repository.RootPath);
+                _logger.LogError(exception, "Unable to select persona {Persona} for repository {Workspace}", _persona, _repository.RootPath);
                 throw new PersonaSelectionException(_persona, exception);
             }
         }

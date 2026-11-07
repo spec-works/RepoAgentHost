@@ -4,6 +4,9 @@ param(
     [string]$Command = "start",
     [string]$AgentId,
     [string]$Persona,
+    [string]$Config,
+    [int]$Port,
+    [string]$Catalog,
     [switch]$Background
 )
 
@@ -13,6 +16,9 @@ $resolvedRepositoryPath = if ($RepositoryPath) { [System.IO.Path]::GetFullPath($
 $projectPath = Join-Path $PSScriptRoot "src\RepoAgentHost.Api\RepoAgentHost.Api.csproj"
 if ($Persona -and $Command -ne "add") {
     throw "-Persona applies to -Command add."
+}
+if ($Catalog -and $Command -notin @("add", "remove", "list")) {
+    throw "-Catalog applies to -Command add, remove, or list."
 }
 if ($Background -and $Command -ne "start") {
     throw "-Background applies to -Command start."
@@ -24,7 +30,7 @@ if ($resolvedRepositoryPath -and $Command -notin @("start", "serve", "add")) {
     throw "-RepositoryPath applies to -Command start, serve, or add."
 }
 
-$cliArguments = switch ($Command) {
+$cliArguments = @(switch ($Command) {
     "serve" {
         if ($resolvedRepositoryPath) { @("serve", $resolvedRepositoryPath) }
         else { @("serve") }
@@ -48,7 +54,11 @@ $cliArguments = switch ($Command) {
         @("remove", $AgentId)
     }
     "list" { @("list") }
-}
+})
+
+if ($Config) { $cliArguments += @("--config", [System.IO.Path]::GetFullPath($Config)) }
+if ($PSBoundParameters.ContainsKey("Port")) { $cliArguments += @("--port", "$Port") }
+if ($Catalog) { $cliArguments += @("--catalog", $Catalog) }
 
 dotnet run --no-launch-profile --project $projectPath -- @cliArguments
 exit $LASTEXITCODE
