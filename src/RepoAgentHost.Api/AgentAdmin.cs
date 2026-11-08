@@ -30,6 +30,12 @@ public sealed class AgentAdmin(AgentRegistry registry, string pipeName, ILogger<
     public static string PipeName(int port, string? configPath = null)
     {
         var account = $"{Environment.UserDomainName}\\{Environment.UserName}";
+        if (!OperatingSystem.IsWindows())
+        {
+            // .NET stores Unix pipes in the temp directory, subject to socket path length limits.
+            var identity = $"{account}\0{port}\0{(configPath is null ? "" : Path.GetFullPath(configPath))}";
+            return "agentdock-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))[..16];
+        }
         var accountHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(account)))[..16];
         var configSuffix = configPath is null ? "" : "-" + Convert.ToHexString(SHA256.HashData(
             Encoding.UTF8.GetBytes(OperatingSystem.IsWindows() ? Path.GetFullPath(configPath).ToUpperInvariant()
