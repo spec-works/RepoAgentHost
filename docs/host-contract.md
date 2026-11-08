@@ -100,8 +100,14 @@ approved under the host account. Agent/session separation is not an OS sandbox. 
 one agent share its history. Use only trusted local callers and workspaces.
 
 Optional allowed roots restrict registration. Paths through junctions/symlinks are rejected.
-Repository MCP/hook auto-discovery is disabled. Selecting a persona does not grant access to app
-conversation history, private memory, or external services. Retrieved workspace material goes to
+Runtime discovery of supported Copilot configuration is enabled, including MCP server definitions;
+explicit host settings take precedence. The host does not exclude specific MCP server names.
+Repository MCP configuration is subject to Copilot folder trust; registration does not bypass it.
+Repository file hooks remain disabled. Discovered servers may launch commands or contact external
+services under the host account, subject to runtime authentication and managed policies. Their tool
+calls use the host's automatic permission approval without per-call confirmation.
+Selecting a persona does not grant access to app conversation history, private memory, or external
+services. Retrieved workspace material goes to
 the configured inference runtime; only approved content should be hosted.
 
 ## Verification and publication

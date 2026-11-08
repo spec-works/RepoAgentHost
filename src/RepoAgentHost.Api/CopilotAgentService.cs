@@ -298,7 +298,7 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
         config.Model = _model;
         config.WorkingDirectory = _repository.RootPath;
         config.SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Replace, Content = SystemPrompt };
-        config.EnableConfigDiscovery = false;
+        config.EnableConfigDiscovery = true;
         config.SkipCustomInstructions = false;
         config.EnableOnDemandInstructionDiscovery = true;
         config.EnableSkills = true;
@@ -308,7 +308,6 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
             : _repository.AgentDirectories.Concat(
                 [Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".copilot", "agents")])
                 .Distinct().ToList();
-        config.DisabledMcpServers = ["github-mcp-server", "githubiq"];
         config.EnableSessionStore = false;
         config.SkipEmbeddingRetrieval = true;
         config.OnPermissionRequest = PermissionHandler.ApproveAll;

@@ -355,6 +355,13 @@ workspaces; do not expose the host remotely without appropriate security.
 
 Send bounded outcomes, not ambient authorization. Never put secrets in requests or profiles.
 Workspace content goes to the configured Copilot inference service; use only approved data.
+Runtime discovery of supported Copilot configuration is enabled, including MCP server definitions;
+explicit host settings take precedence, with no host-imposed server-name exclusions. Discovered
+servers may launch local commands or contact external services under the host account; trust the
+repository and configured servers. Their tool calls are automatically approved without per-call
+confirmation. Authentication and managed policies still apply. Repository
+MCP configuration requires Copilot folder trust; registration does not bypass it. Repository file
+hooks remain disabled. Restart the host to apply configuration changes to loaded sessions.
 
 Installation references:
 <https://github.com/Agent-Card/ai-catalog-cli#install> and

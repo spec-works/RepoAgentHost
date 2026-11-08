@@ -344,9 +344,9 @@ To change a registered persona, remove and re-add the same ID/workspace with the
 explicitly if you want fresh history.
 
 Selecting Margo does not import this app's conversation, grant private-memory filesystem access,
-or configure Work IQ. Existing workspace/tool boundaries and disabled hook/MCP discovery still
-apply. RepoAgentHost does not copy persona definitions into the workspace or expose private persona
-paths in public cards.
+or configure Work IQ. Existing workspace/tool boundaries still apply, and file hooks remain disabled.
+MCP servers are discovered by the Copilot runtime from supported configuration. RepoAgentHost
+does not copy persona definitions into the workspace or expose private persona paths in public cards.
 
 ### Consumer skill
 
@@ -376,8 +376,15 @@ automatically. Publishing also copies it alongside the executable as
   common build, dependency, and Git directories, and does not follow directory junctions or
   symlinks outside normal traversal.
 - Skills are found by locating `SKILL.md` files and passing their skill roots to the Copilot SDK.
-  Repository instructions and local custom agents are loaded, but automatic configuration discovery
-  is disabled so repository-provided MCP servers and hooks are not started.
+  Repository instructions and local custom agents are loaded. Runtime discovery of supported
+  Copilot configuration is enabled, including MCP server definitions; explicitly supplied host
+  settings take precedence over discovered values. File hooks remain explicitly disabled.
+  Repository MCP configuration (`.mcp.json` or `.github/mcp.json`) requires the repository folder
+  to be trusted in the host user's Copilot profile; the host does not bypass folder trust.
+  Discovered MCP servers can launch local commands or connect to external services under the host
+  account. Their tool calls use the host's automatic permission approval, without per-call
+  confirmation; only host repositories and configuration you trust. Server authentication and managed
+  policies still apply. Restart the host to apply this setting to previously loaded sessions.
 - Tool calls run under the current Windows account. The agent is instructed to preserve unrelated
   changes and not commit, push, change remotes, or perform destructive actions unless requested.
 - The A2A endpoint has no authentication yet. Loopback binding prevents remote network access, not
