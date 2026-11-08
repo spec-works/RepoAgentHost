@@ -45,6 +45,9 @@ to `default`. The host exclusively locks the config and updates it atomically fo
 Manual edits require a restart. An explicit config stores runtime state in `<config-path>.state`;
 without one the legacy state directory remains in use. Management targets both port and config
 identity. Background startup propagates those choices to its child process.
+Windows retains the legacy pipe name. On macOS, the account, port, and config identity are
+hashed into a compact same-user pipe name to fit Unix-domain socket path limits in the
+default temporary directory; this does not change the management commands or trust boundary.
 
 ## Discovery and transport
 
@@ -120,6 +123,9 @@ The source repository is public at
 does not imply a published registry entry or public release.
 
 [NuGet-tool packaging](nuget-tool.md) builds `SpecWorks.RepoAgentHost.Cli` with command `rahcli`,
-using self-contained Windows x64/ARM64 packages and a .NET 10 manifest. Disposable installation,
+using self-contained Windows and macOS x64/ARM64 packages and a .NET 10 manifest. Disposable installation,
 runtime handshake, and host HTTP checks gate the manually requested publication job. The
-mechanism does not establish a NuGet.org release or expand supported platforms beyond Windows.
+mechanism does not establish a NuGet.org release. macOS runs in the foreground; `--background`
+remains Windows-only. macOS packaging includes the matching SDK-bundled Copilot runtime and
+requires installed-tool verification on the advertised architecture. It does not install a
+launch agent, grant macOS privacy permissions, or notarize a public binary distribution.

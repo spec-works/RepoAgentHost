@@ -26,7 +26,7 @@ copied into this repository.
 ## Install as a .NET tool
 
 The repository builds `SpecWorks.RepoAgentHost.Cli`, invoked as `rahcli`.
-The first tool packages target **Windows x64 and ARM64**. A small manifest package selects the
+The tool packages target **Windows and macOS, x64 and ARM64**. A small manifest package selects the
 matching RID package, which includes both the .NET/ASP.NET runtimes and the SDK's Copilot runtime
 assets. Installation requires the **.NET 10 SDK or later** for platform-specific tool support;
 no separate .NET runtime or Copilot executable is required after installation.
@@ -49,9 +49,37 @@ rahcli --version
 rahcli start
 ```
 
-Keep all three generated packages together: the manifest plus `.win-x64` and `.win-arm64`
+Keep all five generated packages together: the manifest plus `.win-x64`, `.win-arm64`,
+`.osx-x64`, and `.osx-arm64`
 packages. Do not install the RID packages directly. See [tool packaging and release](docs/nuget-tool.md)
 for the local verification command and the gated publication workflow.
+
+### Build and run on macOS
+
+From the checkout, build a self-contained Apple Silicon CLI:
+
+```bash
+export TMPDIR="$(cd "${TMPDIR:-/tmp}" && pwd -P)/"
+dotnet test RepoAgentHost.sln -c Release
+dotnet publish src/RepoAgentHost.Api/RepoAgentHost.Api.csproj \
+  -c Release -r osx-arm64 --self-contained true -o artifacts/osx-arm64
+./artifacts/osx-arm64/rahcli --version
+./artifacts/osx-arm64/rahcli start
+```
+
+Use `osx-x64` for an Intel Mac. Keep the entire publish directory, including `runtimes` and
+hidden plugin files; `rahcli` alone is not the distribution. Once built, this directory needs
+neither a separate .NET runtime nor a separately installed Copilot executable.
+
+Leave the host running and use a second terminal to `add`, `list`, `remove`, or `stop` via the
+same executable. `start --background` remains Windows-only. No macOS launch agent is installed.
+The default macOS state path is under the .NET `LocalApplicationData` directory; use
+`--config /absolute/path/host.json` for an explicit location, with runtime state in
+`host.json.state`. Workspace paths must be physical paths without symbolic-link ancestors.
+
+For a local NuGet tool installation and its disposable smoke check, see
+[tool packaging and release](docs/nuget-tool.md). Public release and Mac signing/notarization
+are separate from building locally.
 
 ## Requirements
 

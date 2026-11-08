@@ -30,11 +30,12 @@ approved package manager or release-download method. These instructions are not 
 ### RepoAgentHost
 
 The .NET tool package is `SpecWorks.RepoAgentHost.Cli`; its command is `rahcli`.
-Installation requires .NET SDK 10 or later. Initial RID packages support Windows x64 and ARM64
+Installation requires .NET SDK 10 or later. RID packages support Windows and macOS x64 and ARM64
 and include the .NET/ASP.NET and Copilot runtimes. Install the manifest package, not its
-`.win-x64`/`.win-arm64` implementation packages. Do not assume it is published to NuGet.org.
+`.win-x64`, `.win-arm64`, `.osx-x64`, or `.osx-arm64` implementation packages.
+Do not assume it is published to NuGet.org.
 
-If the user supplies a local feed containing all three matching packages:
+If the user supplies a local feed containing all five matching packages:
 
 ```powershell
 dotnet tool install --global SpecWorks.RepoAgentHost.Cli --version <approved-version> `
@@ -64,6 +65,10 @@ dotnet publish .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj `
 
 Building requires the .NET 10 SDK; the self-contained executable needs no separate .NET runtime.
 Choose the destination RID, for example `win-x64`, rather than assuming Windows means ARM64.
+On macOS, publish with `-r osx-arm64` (Apple Silicon) or `-r osx-x64` (Intel), omit
+the single-file options, and invoke `rahcli` without `.exe`. Keep the entire publish directory.
+Use physical workspace paths: symlinked ancestors, including `/var` and `/tmp` on macOS,
+are rejected. For tests, set `TMPDIR` to its physical path with `pwd -P`.
 Agent execution requires an authenticated GitHub Copilot runtime and appropriate subscription.
 Report authentication failures; do not pass tokens in CLI arguments or workspace files.
 
@@ -140,6 +145,7 @@ agents previously removed. With no initial path there is no root/default A2A age
 Leave the terminal running. Ctrl+C or `rahcli stop` shuts down the host and all its agents while
 preserving registrations and saved sessions. `rahcli start --background` detaches the host on
 Windows and appends logs to `host.log` in its state directory. `serve` remains a foreground alias.
+On macOS, use foreground `start`; `--background` is not supported. No launch agent is installed.
 Do not register a
 Windows Service, scheduled task, or auto-start mechanism unless explicitly requested. From an
 agent harness, use its supported long-lived process/terminal mechanism and verify

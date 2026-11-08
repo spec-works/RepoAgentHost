@@ -17,7 +17,10 @@ permissions:
 
 jobs:
   pack:
-    runs-on: windows-latest
+    runs-on: macos-15
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -32,11 +35,15 @@ jobs:
             throw 'Use a three-component NuGet version with an optional prerelease suffix.'
           }
       - name: Test
-        run: dotnet test .\RepoAgentHost.sln --configuration Release
-      - name: Pack Windows tools
+        run: |
+          $physicalTemp = & /bin/sh -c 'cd "${TMPDIR:-/tmp}" && pwd -P'
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the physical temporary directory.' }
+          $env:TMPDIR = $physicalTemp.TrimEnd('/') + '/'
+          dotnet test ./RepoAgentHost.sln --configuration Release
+      - name: Pack Windows and macOS tools
         env:
           PACKAGE_VERSION: ${{ inputs.version }}
-        run: dotnet pack .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj --configuration Release -p:Version=$env:PACKAGE_VERSION --output .\artifacts\packages
+        run: dotnet pack ./src/RepoAgentHost.Api/RepoAgentHost.Api.csproj --configuration Release -p:Version=$env:PACKAGE_VERSION --output ./artifacts/packages
       - uses: actions/upload-artifact@v4
         with:
           name: nuget-tool
@@ -47,7 +54,15 @@ jobs:
     needs: pack
     strategy:
       matrix:
-        runner: [windows-latest, windows-11-arm]
+        include:
+          - runner: windows-latest
+            rid: win-x64
+          - runner: windows-11-arm
+            rid: win-arm64
+          - runner: macos-15-intel
+            rid: osx-x64
+          - runner: macos-15
+            rid: osx-arm64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -59,9 +74,10 @@ jobs:
           name: nuget-tool
           path: artifacts/packages
       - name: Install and run matching tool
+        shell: pwsh
         env:
           PACKAGE_VERSION: ${{ inputs.version }}
-        run: .\scripts\verify-tool.ps1 -PackageDirectory .\artifacts\packages -Version $env:PACKAGE_VERSION
+        run: ./scripts/verify-tool.ps1 -PackageDirectory ./artifacts/packages -Version $env:PACKAGE_VERSION -RuntimeIdentifier ${{ matrix.rid }}
 
   publish:
     if: ${{ inputs.publish }}
@@ -85,7 +101,8 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
             throw 'Configure NUGET_API_KEY in the protected nuget environment.'
           }
-          foreach ($id in @('SpecWorks.RepoAgentHost.Cli.win-x64', 'SpecWorks.RepoAgentHost.Cli.win-arm64', 'SpecWorks.RepoAgentHost.Cli')) {
+          foreach ($id in @('SpecWorks.RepoAgentHost.Cli.win-x64', 'SpecWorks.RepoAgentHost.Cli.win-arm64',
+              'SpecWorks.RepoAgentHost.Cli.osx-x64', 'SpecWorks.RepoAgentHost.Cli.osx-arm64', 'SpecWorks.RepoAgentHost.Cli')) {
             $package = ".\artifacts\packages\$id.$env:PACKAGE_VERSION.nupkg"
             dotnet nuget push $package --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
             if ($LASTEXITCODE -ne 0) { throw "Publishing $id failed ($LASTEXITCODE)." }

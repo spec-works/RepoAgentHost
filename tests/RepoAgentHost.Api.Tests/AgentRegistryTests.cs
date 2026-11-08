@@ -322,7 +322,9 @@ public sealed class AgentRegistryTests : IAsyncLifetime
     [Fact]
     public async Task RebrandingPreservesLegacyManagementAndCatalogIdentifiers()
     {
-        Assert.Matches("^agentdock-[0-9A-F]{16}-5080$", AgentAdmin.PipeName(5080));
+        Assert.Matches(OperatingSystem.IsWindows()
+            ? "^agentdock-[0-9A-F]{16}-5080$" : "^agentdock-[0-9A-F]{16}$",
+            AgentAdmin.PipeName(5080));
         var registry = CreateRegistry();
         await registry.StartAsync(CancellationToken.None);
         using var catalog = JsonDocument.Parse(JsonSerializer.Serialize(registry.Catalog()));
@@ -566,7 +568,7 @@ public sealed class AgentRegistryTests : IAsyncLifetime
         var registry = CreateRegistry();
         await registry.StartAsync(CancellationToken.None);
         using var lifetime = new FakeLifetime();
-        var pipeName = "RepoAgentHost-test-" + Guid.NewGuid().ToString("N");
+        var pipeName = AgentAdmin.PipeName(5080, Path.Combine(_root, "host.json"));
         using var admin = new AgentAdmin(registry, pipeName, NullLogger<AgentAdmin>.Instance, lifetime);
         await admin.StartAsync(CancellationToken.None);
         try
