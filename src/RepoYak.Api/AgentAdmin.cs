@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed class AgentAdmin(AgentRegistry registry, string pipeName, ILogger<AgentAdmin> logger,
     IHostApplicationLifetime lifetime) : BackgroundService
@@ -12,11 +12,11 @@ public sealed class AgentAdmin(AgentRegistry registry, string pipeName, ILogger<
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     public const string Usage = """
         Usage:
-          rahcli start [repository-path] [--background]
-          rahcli stop
-          rahcli add <repository-path> [--id <friendly-id>] [--persona <custom-agent-name>] [--catalog <name>]
-          rahcli remove <friendly-id> [--catalog <name>]
-          rahcli list [--catalog <name>]
+          repoyak start [repository-path] [--background]
+          repoyak stop
+          repoyak add <repository-path> [--id <friendly-id>] [--persona <custom-agent-name>] [--catalog <name>]
+          repoyak remove <friendly-id> [--catalog <name>]
+          repoyak list [--catalog <name>]
         All commands accept --config <json-path> and --port <port>.
         Catalogs are served at /catalogs/{name}; /catalog is the default catalog.
         Agents are shared at /agents/{id}. Remove with --catalog changes only membership.

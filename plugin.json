@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "repo-agent-host",
-  "version": "0.2.0",
-  "description": "Install and operate RepoAgentHost workspace-backed A2A agents, discover them through AI Catalog, and delegate tracked work.",
+  "name": "repoyak",
+  "version": "0.2.0-preview.4",
+  "description": "RepoYak by Spec-Works: turn local Git repositories into A2A agents, discover them through AI Catalog, and delegate tracked work.",
   "author": {
     "name": "Darrel Miller",
     "url": "https://github.com/darrelmiller"
   },
-  "homepage": "https://github.com/spec-works/RepoAgentHost",
-  "repository": "https://github.com/spec-works/RepoAgentHost",
+  "homepage": "https://github.com/spec-works/RepoYak",
+  "repository": "https://github.com/spec-works/RepoYak",
   "license": "MIT",
-  "keywords": ["repo-agent-host", "a2a", "ai-catalog", "copilot", "spec-works"]
+  "keywords": ["repoyak", "a2a", "ai-catalog", "copilot", "spec-works"]
 }

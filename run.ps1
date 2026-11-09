@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $resolvedRepositoryPath = if ($RepositoryPath) { [System.IO.Path]::GetFullPath($RepositoryPath) } else { $null }
-$projectPath = Join-Path $PSScriptRoot "src\RepoAgentHost.Api\RepoAgentHost.Api.csproj"
+$projectPath = Join-Path $PSScriptRoot "src\RepoYak.Api\RepoYak.Api.csproj"
 if ($Persona -and $Command -ne "add") {
     throw "-Persona applies to -Command add."
 }

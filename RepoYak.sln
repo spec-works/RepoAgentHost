@@ -5,11 +5,11 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepoAgentHost.Api", "src\RepoAgentHost.Api\RepoAgentHost.Api.csproj", "{B68B8643-2721-4A87-AC85-106B00581C51}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepoYak.Api", "src\RepoYak.Api\RepoYak.Api.csproj", "{B68B8643-2721-4A87-AC85-106B00581C51}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepoAgentHost.Api.Tests", "tests\RepoAgentHost.Api.Tests\RepoAgentHost.Api.Tests.csproj", "{A1690124-40C7-4427-B469-4944AB22189F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepoYak.Api.Tests", "tests\RepoYak.Api.Tests\RepoYak.Api.Tests.csproj", "{A1690124-40C7-4427-B469-4944AB22189F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

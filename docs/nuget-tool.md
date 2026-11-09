@@ -2,8 +2,8 @@
 
 ## Package contract
 
-- Package ID: `SpecWorks.RepoAgentHost.Cli`
-- Command: `rahcli`
+- Package ID: `SpecWorks.RepoYak.Cli`
+- Command: `repoyak`
 - Installer: .NET SDK 10 or later
 - Platforms: `win-x64`, `win-arm64`, `osx-x64`, and `osx-arm64`
 - Deployment: self-contained, including ASP.NET Core and the SDK-bundled Copilot runtime
@@ -23,17 +23,17 @@ configured runtime download source; installed execution does not download a repl
 From the repository root in PowerShell:
 
 ```powershell
-dotnet test .\RepoAgentHost.sln -c Release
-dotnet pack .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj -c Release `
-  -p:Version=0.2.0-preview.1 --output .\artifacts\packages
-.\scripts\verify-tool.ps1 -PackageDirectory .\artifacts\packages -Version 0.2.0-preview.1
+dotnet test .\RepoYak.sln -c Release
+dotnet pack .\src\RepoYak.Api\RepoYak.Api.csproj -c Release `
+  -p:Version=0.2.0-preview.4 --output .\artifacts\packages
+.\scripts\verify-tool.ps1 -PackageDirectory .\artifacts\packages -Version 0.2.0-preview.4
 ```
 
 The verification script checks the matching package's required assets, installs the manifest
-into a disposable tool directory, and exercises `rahcli --version` and `--help`. It then
+into a disposable tool directory, and exercises `repoyak --version` and `--help`. It then
 starts the installed Copilot runtime through the SDK and checks a RPC ping without creating a
 session, running tools, or invoking a model. It uses isolated runtime state and disables logged-in
-user authentication. It does not alter the real RepoAgentHost host, registrations, or conversations.
+user authentication. It does not alter the real RepoYak host, registrations, or conversations.
 It also launches the installed host on a temporary loopback port with a new registry, checks health
 and catalog HTTP responses, and terminates that helper process.
 It also checks same-user CLI registration, listing, removal, shutdown, and persistence after
@@ -45,11 +45,11 @@ host deliberately rejects workspace paths through symlinks. From the repository 
 
 ```bash
 export TMPDIR="$(cd "${TMPDIR:-/tmp}" && pwd -P)/"
-dotnet test RepoAgentHost.sln -c Release
-dotnet pack src/RepoAgentHost.Api/RepoAgentHost.Api.csproj -c Release \
-  -p:Version=0.2.0-preview.1 --output artifacts/packages
+dotnet test RepoYak.sln -c Release
+dotnet pack src/RepoYak.Api/RepoYak.Api.csproj -c Release \
+  -p:Version=0.2.0-preview.4 --output artifacts/packages
 pwsh -File scripts/verify-tool.ps1 \
-  -PackageDirectory artifacts/packages -Version 0.2.0-preview.1
+  -PackageDirectory artifacts/packages -Version 0.2.0-preview.4
 ```
 
 Use a native ARM64 SDK for `osx-arm64` or a native x64 SDK for `osx-x64`. The verifier checks
@@ -62,14 +62,14 @@ Use a matching-architecture SDK: .NET 10's manifest selection can follow the ins
 even when `--arch` is supplied. For example, on Windows ARM64 with an x64 SDK installed:
 
 ```powershell
-.\scripts\verify-tool.ps1 -PackageDirectory .\artifacts\packages -Version 0.2.0-preview.1 `
+.\scripts\verify-tool.ps1 -PackageDirectory .\artifacts\packages -Version 0.2.0-preview.4 `
   -RuntimeIdentifier win-x64 -DotNetExecutable "C:\Program Files\dotnet\x64\dotnet.exe"
 ```
 
 That x64 verification runs under Windows emulation; it is not a native x64 CI result.
 NuGet.org remains available during local installation for the .NET installer's apphost package.
 If that endpoint is unavailable, `-NuGetSource <approved-feed>` selects an alternative feed for
-that dependency; the RepoAgentHost packages still come from `-PackageDirectory`.
+that dependency; the RepoYak packages still come from `-PackageDirectory`.
 
 ## Gated GitHub workflow
 
@@ -92,7 +92,7 @@ retrying already-published versions but cannot replace immutable packages.
 
 ### One-time publisher setup
 
-- Confirm access to the `SpecWorks.RepoAgentHost.Cli` package ID and RID-suffixed IDs with the chosen
+- Confirm access to the `SpecWorks.RepoYak.Cli` package ID and RID-suffixed IDs with the chosen
   NuGet.org account. Project affiliation does not establish NuGet prefix ownership.
 - Create the repository's `nuget` environment with required reviewers and restrict allowed branches
   to the intended release branch. Repository plan/visibility may limit environment protection;
@@ -107,18 +107,42 @@ retrying already-published versions but cannot replace immutable packages.
 - Review bundled dependencies' redistribution terms and private-source/metadata exposure before
   approving the first public package.
 
-No feed credential, public package, visibility change, automatic tag-triggered publication, or
-release upload is created by this mechanism.
+The workflow does not create feed credentials, change repository visibility, or publish from
+tag pushes. Public package publication requires an explicit dispatch with `publish: true`.
 
 ## Updating an installed tool
 
 After publication, stop the host before updating its installed files:
 
 ```powershell
-rahcli stop
-dotnet tool update --global SpecWorks.RepoAgentHost.Cli
+repoyak stop
+dotnet tool update --global SpecWorks.RepoYak.Cli --version 0.2.0-preview.4
 ```
 
-`rahcli stop` shuts down the host and preserves registrations. Ctrl+C also stops a foreground
-`start` process. `rahcli remove <id>` unregisters just that agent. NuGet-tool and self-contained executable installations share the
+`repoyak stop` shuts down the host and preserves registrations. Ctrl+C also stops a foreground
+`start` process. `repoyak remove <id>` unregisters just that agent. NuGet-tool and self-contained executable installations share the
 normal host state, so never run two instances on the same port/state directory.
+
+## Migrating from RepoAgentHost
+
+RepoYak uses a new package ID and command; `dotnet tool update` on the old package does not
+perform the rename. The renamed package is not published by this source change. Once a
+RepoYak version is available from your approved feed:
+
+```powershell
+rahcli stop
+dotnet tool uninstall --global SpecWorks.RepoAgentHost.Cli
+dotnet tool install --global SpecWorks.RepoYak.Cli --version <approved-version>
+repoyak start
+```
+
+Use the same `--config` and `--port` options when stopping and restarting a configured host.
+For a local feed, add `--add-source <package-directory>` to the install command and keep all
+five matching packages together. If using standalone binaries, stop the old host and use the
+new `repoyak` executable rather than uninstalling a .NET tool.
+
+Saved registrations, catalog memberships, and Copilot session references remain in their
+existing locations. The legacy `AgentDock` state directory, management pipe names,
+`urn:agentdock:` identifiers, `REPOSITORY_AGENT_*`, and `REPOAGENT_*` environment variables
+are intentionally unchanged. No `rahcli` alias is installed. The plugin/skill names also change
+to `repoyak`/`repoyak-cli`; replace old consumer installations explicitly.

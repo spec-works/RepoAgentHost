@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Hosting;
 using System.IO.Pipes;
 
-namespace RepoAgentHost.Api.Tests;
+namespace RepoYak.Api.Tests;
 
 public sealed class AgentRegistryTests : IAsyncLifetime
 {
@@ -227,11 +227,11 @@ public sealed class AgentRegistryTests : IAsyncLifetime
     {
         var config = Path.Combine(_root, "host.json");
         File.WriteAllText(config, """{"port":5099}""");
-        var options = RepoAgentHost.Api.HostOptions.Parse(["--config", config, "list", "--catalog", "support"]);
+        var options = RepoYak.Api.HostOptions.Parse(["--config", config, "list", "--catalog", "support"]);
         Assert.Equal(5099, options.Port);
         Assert.Equal(new[] { "list", "--catalog", "support" }, options.Arguments);
         Assert.Equal(config + ".state", options.StateDirectory);
-        Assert.Equal(5100, RepoAgentHost.Api.HostOptions.Parse(["start", "--port", "5100", "--config", config]).Port);
+        Assert.Equal(5100, RepoYak.Api.HostOptions.Parse(["start", "--port", "5100", "--config", config]).Port);
         Assert.NotEqual(AgentAdmin.PipeName(5099), AgentAdmin.PipeName(5099, config));
         Assert.NotEqual(AgentAdmin.PipeName(5099, config), AgentAdmin.PipeName(5099, config + "other"));
     }
@@ -246,7 +246,7 @@ public sealed class AgentRegistryTests : IAsyncLifetime
     [InlineData("start", "--port", "5080", "--port", "5081")]
     public void InvalidCommonOptionsAreRejected(params string[] arguments)
     {
-        Assert.Throws<AgentRegistryException>(() => RepoAgentHost.Api.HostOptions.Parse(arguments));
+        Assert.Throws<AgentRegistryException>(() => RepoYak.Api.HostOptions.Parse(arguments));
     }
 
     [Fact]
@@ -329,7 +329,7 @@ public sealed class AgentRegistryTests : IAsyncLifetime
         await registry.StartAsync(CancellationToken.None);
         using var catalog = JsonDocument.Parse(JsonSerializer.Serialize(registry.Catalog()));
         var host = catalog.RootElement.GetProperty("host");
-        Assert.Equal("RepoAgentHost", host.GetProperty("displayName").GetString());
+        Assert.Equal("RepoYak", host.GetProperty("displayName").GetString());
         var hostId = host.GetProperty("identifier").GetString()!;
         Assert.StartsWith("urn:agentdock:host:", hostId);
         var entry = Assert.Single(catalog.RootElement.GetProperty("entries").EnumerateArray());

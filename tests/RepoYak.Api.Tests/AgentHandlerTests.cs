@@ -1,7 +1,7 @@
 using A2A;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace RepoAgentHost.Api.Tests;
+namespace RepoYak.Api.Tests;
 
 public sealed class AgentHandlerTests
 {

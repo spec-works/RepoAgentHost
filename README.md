@@ -1,21 +1,33 @@
-# RepoAgentHost
+# RepoYak
 
-**A Spec-Works project for hosting workspace-grounded agents through standard discovery and A2A.**
+**Let your repos speak for themselves.**
 
-RepoAgentHost is currently incubated in the public
-[spec-works/RepoAgentHost repository](https://github.com/spec-works/RepoAgentHost).
-The repository is hosted by the `spec-works` organisation. Formerly called AgentDock,
-the project is now RepoAgentHost and its CLI is
-`rahcli`. Local checkout paths remain unchanged.
+RepoYak is a Spec-Works project that turns a local Git repository into an independently addressable
+A2A agent. The repository supplies its knowledge, instructions, skills, and MCP capabilities:
+the repo is the agent.
+One host manages multiple repository agents, each with its own identity and persistent session.
 
-The [host contract](docs/host-contract.md) documents RepoAgentHost-specific behaviour.
+With RepoYak installed and Copilot authenticated, start an agent for the current repository:
+
+```powershell
+repoyak .
+```
+
+RepoYak is currently incubated in the public
+[spec-works/RepoYak repository](https://github.com/spec-works/RepoYak).
+The repository is hosted by the `spec-works` organisation. Formerly called RepoAgentHost
+(and earlier AgentDock), the project is now RepoYak and its CLI is `repoyak`.
+The GitHub repository is `spec-works/RepoYak`; local checkout paths remain unchanged.
+
+The [host contract](docs/host-contract.md) documents RepoYak-specific behaviour.
 [specs.json](specs.json) links the underlying specifications in the Spec-Works linkset convention.
 See [contributing](CONTRIBUTING.md) and the [MIT license](LICENSE).
 
 This is an **incubating host/tool**, not a published conformant Spec-Works part.
 [ADR 0001](adr/0001-spec-works-incubation.md) records the affiliation and staging exceptions.
 
-A local multi-agent A2A host backed by the GitHub Copilot SDK for .NET. Each configured workspace
+A local multi-agent A2A host backed by the Microsoft Copilot SDK for .NET
+(currently packaged as `GitHub.Copilot.SDK`). Each configured workspace
 supplies an agent's knowledge, instructions, skills, and descriptive identity. Each agent owns a
 persistent Copilot session and a separate A2A task store. Workspaces currently use local Git
 repositories, but their public agent cards do not expose that implementation detail.
@@ -25,28 +37,28 @@ copied into this repository.
 
 ## Install as a .NET tool
 
-The repository builds `SpecWorks.RepoAgentHost.Cli`, invoked as `rahcli`.
+The repository builds `SpecWorks.RepoYak.Cli`, invoked as `repoyak`.
 The tool packages target **Windows and macOS, x64 and ARM64**. A small manifest package selects the
 matching RID package, which includes both the .NET/ASP.NET runtimes and the SDK's Copilot runtime
 assets. Installation requires the **.NET 10 SDK or later** for platform-specific tool support;
 no separate .NET runtime or Copilot executable is required after installation.
 
-**Not published to NuGet.org yet.** Once a version is published:
+Install the RepoYak preview from NuGet.org after its release workflow completes:
 
 ```powershell
-dotnet tool install --global SpecWorks.RepoAgentHost.Cli
-rahcli start
+dotnet tool install --global SpecWorks.RepoYak.Cli --version 0.2.0-preview.4
+repoyak start
 ```
 
 To build and install from an authorized local checkout:
 
 ```powershell
-dotnet pack .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj -c Release `
-  -p:Version=0.2.0-preview.1 --output .\artifacts\packages
-dotnet tool install --global SpecWorks.RepoAgentHost.Cli --version 0.2.0-preview.1 `
+dotnet pack .\src\RepoYak.Api\RepoYak.Api.csproj -c Release `
+  -p:Version=0.2.0-preview.4 --output .\artifacts\packages
+dotnet tool install --global SpecWorks.RepoYak.Cli --version 0.2.0-preview.4 `
   --add-source .\artifacts\packages
-rahcli --version
-rahcli start
+repoyak --version
+repoyak start
 ```
 
 Keep all five generated packages together: the manifest plus `.win-x64`, `.win-arm64`,
@@ -60,15 +72,15 @@ From the checkout, build a self-contained Apple Silicon CLI:
 
 ```bash
 export TMPDIR="$(cd "${TMPDIR:-/tmp}" && pwd -P)/"
-dotnet test RepoAgentHost.sln -c Release
-dotnet publish src/RepoAgentHost.Api/RepoAgentHost.Api.csproj \
+dotnet test RepoYak.sln -c Release
+dotnet publish src/RepoYak.Api/RepoYak.Api.csproj \
   -c Release -r osx-arm64 --self-contained true -o artifacts/osx-arm64
-./artifacts/osx-arm64/rahcli --version
-./artifacts/osx-arm64/rahcli start
+./artifacts/osx-arm64/repoyak --version
+./artifacts/osx-arm64/repoyak start
 ```
 
 Use `osx-x64` for an Intel Mac. Keep the entire publish directory, including `runtimes` and
-hidden plugin files; `rahcli` alone is not the distribution. Once built, this directory needs
+hidden plugin files; `repoyak` alone is not the distribution. Once built, this directory needs
 neither a separate .NET runtime nor a separately installed Copilot executable.
 
 Leave the host running and use a second terminal to `add`, `list`, `remove`, or `stop` via the
@@ -121,15 +133,15 @@ a foreground alias. Use other CLI invocations to manage agents or shut down the 
 
 ```powershell
 # Terminal 1: start the host; Ctrl+C shuts down the host and all its agents.
-.\publish\win-arm64\rahcli.exe start
+.\publish\win-arm64\repoyak.exe start
 
 # Terminal 2: register another workspace and start its agent in the running host.
-.\publish\win-arm64\rahcli.exe add "D:\github\darrelmiller\ai-catalog"
-.\publish\win-arm64\rahcli.exe add "D:\github\another\portfolio" --id another-portfolio
-.\publish\win-arm64\rahcli.exe add "D:\github\darrelmiller\margo" --id assistant --persona margo
-.\publish\win-arm64\rahcli.exe list
-.\publish\win-arm64\rahcli.exe remove another-portfolio
-.\publish\win-arm64\rahcli.exe stop
+.\publish\win-arm64\repoyak.exe add "D:\github\darrelmiller\ai-catalog"
+.\publish\win-arm64\repoyak.exe add "D:\github\another\portfolio" --id another-portfolio
+.\publish\win-arm64\repoyak.exe add "D:\github\darrelmiller\margo" --id assistant --persona margo
+.\publish\win-arm64\repoyak.exe list
+.\publish\win-arm64\repoyak.exe remove another-portfolio
+.\publish\win-arm64\repoyak.exe stop
 ```
 
 `start` and `stop` control the **host**. `stop` shuts down all agents but preserves their registrations.
@@ -171,6 +183,9 @@ Registrations persist under `%LOCALAPPDATA%\AgentDock\hosts\port-5080\agents.jso
 The legacy `AgentDock` state directory, management pipe prefix, and catalog URNs are intentionally
 retained for compatibility. Renaming does not move saved sessions or create new agent identities.
 Existing `REPOSITORY_AGENT_PORT` and `REPOAGENT_*` configuration names remain supported.
+The executable/package rename does not provide a `rahcli` alias. When moving from the old .NET
+tool, stop the host before uninstalling `SpecWorks.RepoAgentHost.Cli` and installing
+`SpecWorks.RepoYak.Cli`; see [migration instructions](docs/nuget-tool.md#migrating-from-repoagenthost).
 The initial path seeds a new registry only; on subsequent host starts the saved registrations are
 restored, including the absence of agents previously removed. Agents that fail to start are shown
 by `list` with their error, but are excluded from discovery. Remove and re-add to retry them.
@@ -220,12 +235,12 @@ the file's port and is saved by the host on startup. Otherwise the file's port t
 over `REPOSITORY_AGENT_PORT`, with `5080` as the fallback.
 
 ```powershell
-rahcli start --config "D:\agents\host.json" --port 5081 --background
-rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
-rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
-rahcli list --catalog support --config "D:\agents\host.json"
-rahcli remove work-iq-support --catalog support --config "D:\agents\host.json"
-rahcli stop --config "D:\agents\host.json"
+repoyak start --config "D:\agents\host.json" --port 5081 --background
+repoyak add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
+repoyak add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
+repoyak list --catalog support --config "D:\agents\host.json"
+repoyak remove work-iq-support --catalog support --config "D:\agents\host.json"
+repoyak stop --config "D:\agents\host.json"
 ```
 
 Both catalogs advertise the same card URL and stable agent identifier. Repeating `add` with the
@@ -263,7 +278,7 @@ The development wrapper accepts `-Config`, `-Port`, and `-Catalog`, for example:
 On the Windows ARM64 development machine, publish a self-contained executable:
 
 ```powershell
-dotnet publish .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj `
+dotnet publish .\src\RepoYak.Api\RepoYak.Api.csproj `
   -c Release -r win-arm64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true `
   -o .\publish\win-arm64
@@ -272,7 +287,7 @@ dotnet publish .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj `
 Run the published executable to restore the registry:
 
 ```powershell
-.\publish\win-arm64\rahcli.exe start
+.\publish\win-arm64\repoyak.exe start
 ```
 
 The agent scans text files when it receives a question, so changes to bundle documents are picked up
@@ -326,13 +341,13 @@ Register an installed custom-agent name with `--persona`; it is independent of t
 and the workspace's public card:
 
 ```powershell
-.\publish\win-arm64\rahcli.exe add "D:\knowledge\assistant" --id assistant --persona margo
+.\publish\win-arm64\repoyak.exe add "D:\knowledge\assistant" --id assistant --persona margo
 .\run.ps1 -Command add -RepositoryPath "D:\knowledge\assistant" -AgentId assistant -Persona margo
 ```
 
 `list` includes the persisted `persona` name. Existing registrations without it still run the
 default agent. The SDK resolves the name from available custom agents, including workspace agent
-roots and the host user's `~\.copilot\agents` directory. RepoAgentHost uses the SDK's native
+roots and the host user's `~\.copilot\agents` directory. RepoYak uses the SDK's native
 session-scoped selection API rather than parsing agent definitions itself. Persona selection is
 validated on first work, not during registration, to preserve lazy runtime startup. An unavailable
 or disabled persona fails the request; it never silently falls back to the default agent.
@@ -345,15 +360,15 @@ explicitly if you want fresh history.
 
 Selecting Margo does not import this app's conversation, grant private-memory filesystem access,
 or configure Work IQ. Existing workspace/tool boundaries still apply, and file hooks remain disabled.
-MCP servers are discovered by the Copilot runtime from supported configuration. RepoAgentHost
+MCP servers are discovered by the Copilot runtime from supported configuration. RepoYak
 does not copy persona definitions into the workspace or expose private persona paths in public cards.
 
 ### Consumer skill
 
-[The RepoAgentHost CLI skill](skills/repo-agent-host-cli/SKILL.md) teaches consumers how to acquire
-the `ai-catalog` and `a2a` CLIs, run and manage RepoAgentHost, discover cards, and track tasks.
+[The RepoYak CLI skill](skills/repoyak-cli/SKILL.md) teaches consumers how to acquire
+the `ai-catalog` and `a2a` CLIs, run and manage RepoYak, discover cards, and track tasks.
 The repository root is an [Agent Plugins 1.0](https://agent-plugins.org/specification) plugin
-named `repo-agent-host`, with a root `plugin.json` and a discoverable `skills/repo-agent-host-cli/SKILL.md`.
+named `repoyak`, with a root `plugin.json` and a discoverable `skills/repoyak-cli/SKILL.md`.
 Install the repository or the generated plugin ZIP using a compatible client's plugin installer.
 See [plugin distribution and installation](docs/plugin.md). Installation syntax is client-specific;
 the standard does not define a universal install command.
@@ -361,14 +376,14 @@ the standard does not define a universal install command.
 Alternatively, install just the skill in a directory supported by your agent harness:
 
 ```powershell
-$destination = Join-Path $HOME ".agents\skills\repo-agent-host-cli"
+$destination = Join-Path $HOME ".agents\skills\repoyak-cli"
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
-Copy-Item "skills\repo-agent-host-cli\SKILL.md" (Join-Path $destination "SKILL.md")
+Copy-Item "skills\repoyak-cli\SKILL.md" (Join-Path $destination "SKILL.md")
 ```
 
 Use your harness's documented skill root if different. The skill does not install executables
 automatically. Publishing also copies it alongside the executable as
-`skills\repo-agent-host-cli\SKILL.md`.
+`skills\repoyak-cli\SKILL.md`.
 
 ## Repository discovery and safety
 

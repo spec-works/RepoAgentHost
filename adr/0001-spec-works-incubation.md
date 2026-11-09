@@ -2,6 +2,17 @@
 
 ## Status
 
+Superseding amendment on 2026-11-08: the product is RepoYak under Spec-Works branding.
+The solution is `RepoYak.sln`, projects/namespaces are `RepoYak.Api` and `RepoYak.Api.Tests`,
+the executable/command is `repoyak`, the package is `SpecWorks.RepoYak.Cli`, the plugin is
+`repoyak`, and the consumer skill is `repoyak-cli`. The GitHub repository is renamed to
+`spec-works/RepoYak`; local checkout paths are unchanged. Existing state paths,
+management pipe names, catalog URNs, environment variables, and saved session references
+remain compatible. No `rahcli` command alias is shipped. The renamed package requires a
+separate install, not an update of `SpecWorks.RepoAgentHost.Cli`. Package publication and
+remote repository renaming are separate actions, now authorized alongside release
+`0.2.0-preview.4`. Earlier amendments remain historical context.
+
 Superseding amendment on 2026-11-04: the repository is now hosted at
 `spec-works/RepoAgentHost`. The solution is `RepoAgentHost.sln`, the source and test projects
 are `RepoAgentHost.Api` and `RepoAgentHost.Api.Tests`, and their C# namespaces match those names.

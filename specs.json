@@ -31,16 +31,16 @@
       "title": "Agent Skills Specification"
     },
     {
-      "href": "https://github.com/spec-works/RepoAgentHost/blob/main/docs/host-contract.md",
+      "href": "https://github.com/spec-works/RepoYak/blob/main/docs/host-contract.md",
       "type": "text/html",
       "rel": "describedby",
-      "title": "RepoAgentHost Host Contract"
+      "title": "RepoYak Host Contract"
     },
     {
       "href": "https://github.com/github/copilot-sdk",
       "type": "text/html",
       "rel": "related",
-      "title": "GitHub Copilot SDK"
+      "title": "Microsoft Copilot SDK"
     }
   ]
 }

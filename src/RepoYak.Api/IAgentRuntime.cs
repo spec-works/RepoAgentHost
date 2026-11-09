@@ -1,4 +1,4 @@
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public interface IAgentRuntime
 {

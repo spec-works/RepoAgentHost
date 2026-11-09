@@ -1,24 +1,23 @@
 ---
-name: repo-agent-host-cli
-description: Host and manage local A2A agents with RepoAgentHost, discover their cards through AI Catalog, and delegate tracked work using a2a. Includes acquiring RepoAgentHost, ai-catalog, and a2a executables. Use for starting or stopping hosted agents, registering knowledge workspaces, discovering local agents, or sending work to RepoAgentHost.
+name: repoyak-cli
+description: Host and manage local A2A agents with RepoYak, discover their cards through AI Catalog, and delegate tracked work using a2a. Includes acquiring RepoYak, ai-catalog, and a2a executables. Use for starting or stopping hosted agents, registering knowledge workspaces, discovering local agents, or sending work to RepoYak.
 ---
 
-# RepoAgentHost CLI
+# RepoYak CLI
 
-This skill is distributed by the `repo-agent-host` Agent Plugins 1.0 plugin. Loading the plugin
+This skill is distributed by the `repoyak` Agent Plugins 1.0 plugin. Loading the plugin
 does not install executables, start a host, or grant permission to invoke agents.
 
-RepoAgentHost is a Spec-Works project at the public repository
-`spec-works/RepoAgentHost`. Do not assume a public catalog listing or public release exists.
-A NuGet tool packaging mechanism
-exists, but no NuGet.org publication is established. Source and binary distributions use MIT.
+RepoYak is a Spec-Works project at the public repository
+`spec-works/RepoYak`. Package publication is version-specific and gated by the release workflow;
+verify the requested version is available before installation. Source and binary distributions use MIT.
 
-RepoAgentHost hosts agents whose workspaces supply knowledge, instructions, skills, and public
+RepoYak hosts agents whose workspaces supply knowledge, instructions, skills, and public
 identity. The backing storage is not part of the public agent interface.
 
 | Tool | Responsibility |
 |---|---|
-| `rahcli` | Start/stop the host and add, list, or remove its agents |
+| `repoyak` | Start/stop the host and add, list, or remove its agents |
 | `ai-catalog` | Discover agents and obtain their card URLs |
 | `a2a` | Inspect cards, send messages, and fetch or cancel tracked tasks |
 
@@ -27,52 +26,52 @@ identity. The backing storage is not part of the public agent interface.
 Check existing installations first. Install/upgrade only with the user's permission, using their
 approved package manager or release-download method. These instructions are not standing consent.
 
-### RepoAgentHost
+### RepoYak
 
-The .NET tool package is `SpecWorks.RepoAgentHost.Cli`; its command is `rahcli`.
+The .NET tool package is `SpecWorks.RepoYak.Cli`; its command is `repoyak`.
 Installation requires .NET SDK 10 or later. RID packages support Windows and macOS x64 and ARM64
 and include the .NET/ASP.NET and Copilot runtimes. Install the manifest package, not its
 `.win-x64`, `.win-arm64`, `.osx-x64`, or `.osx-arm64` implementation packages.
-Do not assume it is published to NuGet.org.
+Verify the approved version is available from the chosen feed.
 
 If the user supplies a local feed containing all five matching packages:
 
 ```powershell
-dotnet tool install --global SpecWorks.RepoAgentHost.Cli --version <approved-version> `
+dotnet tool install --global SpecWorks.RepoYak.Cli --version <approved-version> `
   --add-source <approved-package-directory>
-rahcli --version
+repoyak --version
 ```
 
 After confirming a public version exists, the approved public-feed installation is:
 
 ```powershell
-dotnet tool install --global SpecWorks.RepoAgentHost.Cli --version <approved-version>
+dotnet tool install --global SpecWorks.RepoYak.Cli --version <approved-version>
 ```
 
 Stop the foreground host before `dotnet tool update`; do not overwrite a running installation.
 Package installation is not account authentication or permission to start inference.
 
-Use a supplied executable or build from an authorized checkout of `spec-works/RepoAgentHost`.
-Do not assume a public release exists. From that checkout:
+Use a supplied executable or build from an authorized checkout of `spec-works/RepoYak`.
+From that checkout:
 
 ```powershell
-dotnet publish .\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj `
+dotnet publish .\src\RepoYak.Api\RepoYak.Api.csproj `
   -c Release -r win-arm64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true `
   -o .\publish\win-arm64
-.\publish\win-arm64\rahcli.exe list
+.\publish\win-arm64\repoyak.exe list
 ```
 
 Building requires the .NET 10 SDK; the self-contained executable needs no separate .NET runtime.
 Choose the destination RID, for example `win-x64`, rather than assuming Windows means ARM64.
 On macOS, publish with `-r osx-arm64` (Apple Silicon) or `-r osx-x64` (Intel), omit
-the single-file options, and invoke `rahcli` without `.exe`. Keep the entire publish directory.
+the single-file options, and invoke `repoyak` without `.exe`. Keep the entire publish directory.
 Use physical workspace paths: symlinked ancestors, including `/var` and `/tmp` on macOS,
 are rejected. For tests, set `TMPDIR` to its physical path with `pwd -P`.
 Agent execution requires an authenticated GitHub Copilot runtime and appropriate subscription.
 Report authentication failures; do not pass tokens in CLI arguments or workspace files.
 
-Use the full executable path or the user's normal PATH setup. Examples below assume `rahcli`
+Use the full executable path or the user's normal PATH setup. Examples below assume `repoyak`
 resolves to the supplied binary.
 
 ### AI Catalog CLI: `ai-catalog`
@@ -133,17 +132,17 @@ unrelated A2A client or invent flags when a command fails.
 Start a normal foreground host in one terminal:
 
 ```powershell
-rahcli start
+repoyak start
 ```
 
 `start` restores saved registrations, or starts with an empty catalog on first run. An optional
-`rahcli start "C:\agents\portfolio"` seeds a new registry. The single-path form remains an
+`repoyak start "C:\agents\portfolio"` seeds a new registry. The single-path form remains an
 alias for that seeded form. Subsequent starts reload saved registrations without resurrecting
 agents previously removed. With no initial path there is no root/default A2A agent: discover through
 `/catalog` and use `/agents/{id}`; never assume the first catalog entry is a default agent.
 
-Leave the terminal running. Ctrl+C or `rahcli stop` shuts down the host and all its agents while
-preserving registrations and saved sessions. `rahcli start --background` detaches the host on
+Leave the terminal running. Ctrl+C or `repoyak stop` shuts down the host and all its agents while
+preserving registrations and saved sessions. `repoyak start --background` detaches the host on
 Windows and appends logs to `host.log` in its state directory. `serve` remains a foreground alias.
 On macOS, use foreground `start`; `--background` is not supported. No launch agent is installed.
 Do not register a
@@ -154,11 +153,11 @@ agent harness, use its supported long-lived process/terminal mechanism and verif
 In another terminal:
 
 ```powershell
-rahcli add "C:\agents\ai-catalog"
-rahcli add "C:\other\portfolio" --id another-portfolio
-rahcli add "C:\agents\assistant" --id assistant --persona margo
-rahcli list
-rahcli remove another-portfolio
+repoyak add "C:\agents\ai-catalog"
+repoyak add "C:\other\portfolio" --id another-portfolio
+repoyak add "C:\agents\assistant" --id assistant --persona margo
+repoyak list
+repoyak remove another-portfolio
 ```
 
 `add` registers an agent in an **already running host**. `remove` targets an **agent ID**,
@@ -166,7 +165,7 @@ cancels/joins its outstanding A2A work, and unregisters it.
 It does not delete the workspace or saved session. Obtain specific approval before removing an
 agent that may have active work. Re-registering the same ID and workspace resumes its session.
 
-Registration starts no Copilot process and loads no session. RepoAgentHost lazily starts **one shared
+Registration starts no Copilot process and loads no session. RepoYak lazily starts **one shared
 Copilot runtime** on first work (or `/new-session`), then creates/resumes distinct per-agent sessions.
 Each request targets its agent's session object with that workspace's configuration; the runtime has
 no global "current agent" to switch. Different agents can work concurrently without sharing history.
@@ -214,7 +213,7 @@ Set configuration before starting the host:
 ```powershell
 $env:REPOSITORY_AGENT_PORT = "5081"
 $env:REPOAGENT_ALLOWED_ROOTS = "C:\agents;D:\knowledge"
-rahcli start
+repoyak start
 ```
 
 Set the same port in the control-command terminal. Current workspaces must be local Git
@@ -235,10 +234,10 @@ Stop before manually editing the file; restart loads edits. Selecting a differen
 automatically move saved sessions.
 
 ```powershell
-rahcli start --config "D:\agents\host.json" --port 5081 --background
-rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
-rahcli add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
-rahcli list --catalog support --config "D:\agents\host.json"
+repoyak start --config "D:\agents\host.json" --port 5081 --background
+repoyak add "D:\github\microsoft\work-iq" --id work-iq-support --catalog support --config "D:\agents\host.json"
+repoyak add "D:\github\microsoft\work-iq" --id work-iq-support --catalog engineering --config "D:\agents\host.json"
+repoyak list --catalog support --config "D:\agents\host.json"
 ```
 
 `add` with the same workspace/ID and an explicit catalog adds membership idempotently, without
@@ -251,9 +250,9 @@ empty catalogs are retained. Independent processes still require different ports
 ## Discover agents through AI Catalog
 
 ```powershell
-ai-catalog catalog add repo-agent-host-local http://127.0.0.1:5080/catalog
+ai-catalog catalog add repoyak-local http://127.0.0.1:5080/catalog
 ai-catalog search portfolio --json
-ai-catalog catalog update repo-agent-host-local
+ai-catalog catalog update repoyak-local
 ```
 
 Catalog clients cache documents; refresh after starting/stopping agents. If the name is already
@@ -264,7 +263,7 @@ Entries have a stable `identifier` URN including host identity and agent ID, typ
 Get the actual identifier from search; do not invent it from the folder name.
 
 ```powershell
-ai-catalog show "<identifier-from-search>" --scope repo-agent-host-local --json
+ai-catalog show "<identifier-from-search>" --scope repoyak-local --json
 ```
 
 Pass the entry's `url` to `a2a card get`. Cards live at
@@ -275,7 +274,7 @@ interfaces over constructing URLs. **HTTP+JSON is the preferred binding**; the A
 The friendly `/agents/{id}` URL also serves the card for clients that interpret a URL with a path
 as a direct card URL rather than appending the well-known discovery path.
 
-RepoAgentHost deliberately uses loopback HTTP. Some catalog clients restrict pulling HTTP artifacts:
+RepoYak deliberately uses loopback HTTP. Some catalog clients restrict pulling HTTP artifacts:
 report a policy rejection and use the A2A client's supported discovery operation for this trusted
 local endpoint. Never disable transport security for a remote service to force a pull.
 

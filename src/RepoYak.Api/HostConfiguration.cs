@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed record HostConfiguration(string HostId, AgentRegistration[] Agents,
     Dictionary<string, string[]>? Catalogs = null, int? Port = null);

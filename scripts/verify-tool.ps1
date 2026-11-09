@@ -18,7 +18,7 @@ if ($rid -notin @('win-x64', 'win-arm64', 'osx-x64', 'osx-arm64')) {
     throw "Tool smoke checks require Windows or macOS x64 or ARM64; current RID is $rid."
 }
 $windowsPackage = $rid.StartsWith('win-')
-$hostExecutable = if ($windowsPackage) { 'rahcli.exe' } else { 'rahcli' }
+$hostExecutable = if ($windowsPackage) { 'repoyak.exe' } else { 'repoyak' }
 $runtimeExecutable = if ($windowsPackage) { 'copilot-runtime.exe' } else { 'copilot-runtime' }
 $copilotExecutable = if ($windowsPackage) { 'copilot.exe' } else { 'copilot' }
 $runtimeLibrary = if ($windowsPackage) { 'copilot_runtime.dll' } else { 'libcopilot_runtime.dylib' }
@@ -28,14 +28,14 @@ if ($IsMacOS) {
     $env:TMPDIR = $physicalTemp.TrimEnd('/') + '/'
 }
 
-$package = Join-Path $PackageDirectory "SpecWorks.RepoAgentHost.Cli.$rid.$Version.nupkg"
+$package = Join-Path $PackageDirectory "SpecWorks.RepoYak.Cli.$rid.$Version.nupkg"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($package)
 try {
     $prefix = "tools/any/$rid/"
     foreach ($required in @(
-        $hostExecutable, 'rahcli.runtimeconfig.json', 'LICENSE', 'specs.json', 'plugin.json',
-        'skills/repo-agent-host-cli/SKILL.md',
+        $hostExecutable, 'repoyak.runtimeconfig.json', 'LICENSE', 'specs.json', 'plugin.json',
+        'skills/repoyak-cli/SKILL.md',
         "runtimes/$rid/native/$copilotExecutable",
         "runtimes/$rid/native/$runtimeExecutable",
         "runtimes/$rid/native/$runtimeLibrary",
@@ -54,13 +54,13 @@ try {
 $toolDirectory = Join-Path ([System.IO.Path]::GetTempPath()) "rah-$([Guid]::NewGuid().ToString('N').Substring(0, 16))"
 New-Item -ItemType Directory -Path $toolDirectory | Out-Null
 try {
-    & $DotNetExecutable tool install SpecWorks.RepoAgentHost.Cli --version $Version --tool-path $toolDirectory `
+    & $DotNetExecutable tool install SpecWorks.RepoYak.Cli --version $Version --tool-path $toolDirectory `
         --source $PackageDirectory --source $NuGetSource --arch $rid.Substring(4)
     if ($LASTEXITCODE -ne 0) { throw "Local tool installation failed ($LASTEXITCODE)." }
 
-    $command = Join-Path $toolDirectory $(if ($windowsPackage) { 'rahcli.cmd' } else { 'rahcli' })
+    $command = Join-Path $toolDirectory $(if ($windowsPackage) { 'repoyak.cmd' } else { 'repoyak' })
     $versionOutput = & $command --version
-    if ($LASTEXITCODE -ne 0 -or $versionOutput -ne "RepoAgentHost $($Version.Split('-')[0])") {
+    if ($LASTEXITCODE -ne 0 -or $versionOutput -ne "RepoYak $($Version.Split('-')[0])") {
         throw "Unexpected tool version: $versionOutput"
     }
     & $command --help
@@ -87,7 +87,7 @@ try {
         $runtime.FullName (Join-Path $toolDirectory 'runtime-state') `
         $installedHost
     if ($LASTEXITCODE -ne 0) { throw "Bundled Copilot runtime handshake failed ($LASTEXITCODE)." }
-    Write-Output "Verified installed RepoAgentHost tool and bundled runtime for $rid."
+    Write-Output "Verified installed RepoYak tool and bundled runtime for $rid."
 } finally {
     for ($attempt = 1; $attempt -le 5; $attempt++) {
         try {

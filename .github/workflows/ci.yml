@@ -29,7 +29,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the physical temporary directory.' }
             $env:TMPDIR = $physicalTemp.TrimEnd('/') + '/'
           }
-          dotnet test ./RepoAgentHost.sln --configuration Release
+          dotnet test ./RepoYak.sln --configuration Release
       - name: Check whitespace
         run: git diff --check
       - name: Package Agent Plugin
@@ -38,6 +38,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'
         with:
-          name: repo-agent-host-plugin
+          name: repoyak-plugin
           path: artifacts/plugins/*.zip
           if-no-files-found: error
