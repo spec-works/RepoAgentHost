@@ -1,7 +1,7 @@
 using System.Net;
 using A2A;
 using A2A.AspNetCore;
-using RepoAgentHost.Api;
+using RepoYak.Api;
 
 if (args is ["--help"] or ["-h"] or ["help"])
 {
@@ -10,11 +10,11 @@ if (args is ["--help"] or ["-h"] or ["help"])
 }
 if (args is ["--version"])
 {
-    Console.WriteLine($"RepoAgentHost {typeof(AgentAdmin).Assembly.GetName().Version?.ToString(3)}");
+    Console.WriteLine($"RepoYak {typeof(AgentAdmin).Assembly.GetName().Version?.ToString(3)}");
     return;
 }
 
-var hostOptions = RepoAgentHost.Api.HostOptions.Parse(args);
+var hostOptions = RepoYak.Api.HostOptions.Parse(args);
 args = hostOptions.Arguments;
 var port = hostOptions.Port;
 var pipeName = AgentAdmin.PipeName(port, hostOptions.ConfigPath);

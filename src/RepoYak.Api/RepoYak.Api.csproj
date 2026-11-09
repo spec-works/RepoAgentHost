@@ -4,22 +4,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>rahcli</AssemblyName>
-    <Version>0.2.0</Version>
-    <Product>RepoAgentHost</Product>
-    <Description>Spec-Works workspace-grounded A2A agent host with AI Catalog discovery.</Description>
-    <RepositoryUrl>https://github.com/spec-works/RepoAgentHost</RepositoryUrl>
+    <AssemblyName>repoyak</AssemblyName>
+    <Version>0.2.0-preview.4</Version>
+    <Product>RepoYak</Product>
+    <Description>RepoYak by Spec-Works turns local Git repositories into A2A agents with AI Catalog discovery.</Description>
+    <RepositoryUrl>https://github.com/spec-works/RepoYak</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackAsTool>true</PackAsTool>
     <IsPackable>true</IsPackable>
-    <ToolCommandName>rahcli</ToolCommandName>
-    <PackageId>SpecWorks.RepoAgentHost.Cli</PackageId>
+    <ToolCommandName>repoyak</ToolCommandName>
+    <PackageId>SpecWorks.RepoYak.Cli</PackageId>
     <Authors>Darrel Miller</Authors>
-    <PackageProjectUrl>https://github.com/spec-works/RepoAgentHost</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/spec-works/RepoYak</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <NoDefaultExcludes>true</NoDefaultExcludes>
-    <PackageTags>spec-works;a2a;ai-catalog;agents;copilot</PackageTags>
+    <PackageTags>repoyak;spec-works;a2a;ai-catalog;agents;copilot</PackageTags>
     <RuntimeIdentifiers>win-x64;win-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <PublishSelfContained>true</PublishSelfContained>
     <PackageOutputPath>$(MSBuildProjectDirectory)\..\..\artifacts\packages</PackageOutputPath>
@@ -29,9 +29,9 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <PackageReference Include="A2A.AspNetCore" Version="1.0.0-preview3" />
     <PackageReference Include="GitHub.Copilot.SDK" Version="1.0.28" />
-    <Content Include="..\..\skills\repo-agent-host-cli\SKILL.md"
+    <Content Include="..\..\skills\repoyak-cli\SKILL.md"
              Pack="false"
-             Link="skills\repo-agent-host-cli\SKILL.md"
+             Link="skills\repoyak-cli\SKILL.md"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest"
              ExcludeFromSingleFile="true" />

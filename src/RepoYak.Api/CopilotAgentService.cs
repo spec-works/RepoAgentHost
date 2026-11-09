@@ -5,7 +5,7 @@ using GitHub.Copilot;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed class CopilotAgentService : IHostedAgentRuntime
 {
@@ -141,9 +141,9 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
         {
             ObjectDisposedException.ThrowIf(_stopped, this);
             var client = await _runtime.GetClientAsync(cancellationToken);
-            var id = $"repo-agent-host-{Guid.NewGuid():N}";
+            var id = $"repoyak-{Guid.NewGuid():N}";
             var session = await client.CreateSessionAsync(
-                Configure(new SessionConfig { SessionId = id, Name = $"RepoAgentHost {id}" }), cancellationToken);
+                Configure(new SessionConfig { SessionId = id, Name = $"RepoYak {id}" }), cancellationToken);
             try
             {
                 await SelectPersonaAsync(session, cancellationToken);
@@ -190,9 +190,9 @@ public sealed class CopilotAgentService : IHostedAgentRuntime
                 }
                 else
                 {
-                    _sessionId = $"repo-agent-host-{Guid.NewGuid():N}";
+                    _sessionId = $"repoyak-{Guid.NewGuid():N}";
                     var session = await client.CreateSessionAsync(
-                        Configure(new SessionConfig { SessionId = _sessionId, Name = $"RepoAgentHost {_sessionId}" }), cancellationToken);
+                        Configure(new SessionConfig { SessionId = _sessionId, Name = $"RepoYak {_sessionId}" }), cancellationToken);
                     try
                     {
                         await SelectPersonaAsync(session, cancellationToken);

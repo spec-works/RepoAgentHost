@@ -1,7 +1,7 @@
 using A2A;
 using A2A.AspNetCore;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public static class AgentEndpoints
 {

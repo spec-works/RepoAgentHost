@@ -1,4 +1,4 @@
-namespace RepoAgentHost.Api.Tests;
+namespace RepoYak.Api.Tests;
 
 public sealed class RepositoryKnowledgeTests : IDisposable
 {

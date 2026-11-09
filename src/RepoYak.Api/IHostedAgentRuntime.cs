@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Hosting;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public interface IHostedAgentRuntime : IAgentRuntime, IHostedService, IAsyncDisposable;

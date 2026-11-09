@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed record AgentRegistration(string Id, string WorkspacePath, string? Persona = null);
 public sealed record RegisterAgentRequest(string WorkspacePath, string? Id = null, string? Persona = null,

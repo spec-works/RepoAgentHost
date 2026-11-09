@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed class RepositoryKnowledge
 {

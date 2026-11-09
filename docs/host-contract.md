@@ -1,7 +1,8 @@
-# RepoAgentHost host contract
+# RepoYak host contract
 
-RepoAgentHost is a Spec-Works project providing an agent host over workspace knowledge, skills,
-instructions, and the GitHub Copilot SDK. This document describes the current 0.2 implementation,
+RepoYak is a Spec-Works project providing an agent host over workspace knowledge, skills,
+instructions, and the Microsoft Copilot SDK (currently packaged as `GitHub.Copilot.SDK`).
+This document describes the current 0.2 implementation,
 not an independent replacement for the underlying protocol specifications.
 
 ## Specification boundaries
@@ -11,12 +12,12 @@ artifacts, and streaming. [AI Catalog](https://ai-catalog.io/spec/) defines the 
 [Agent Skills](https://agentskills.io/specification) defines workspace skill artifacts.
 [specs.json](../specs.json) is the project's specification linkset.
 
-RepoAgentHost-specific contracts are registration, runtime ownership, workspace binding, and
+RepoYak-specific contracts are registration, runtime ownership, workspace binding, and
 receiving-session continuity. Git is the current workspace provider, not the public agent identity.
 
 ## Registration and host lifetime
 
-`rahcli start` restores the persisted registry or initializes an empty one. An optional workspace
+`repoyak start` restores the persisted registry or initializes an empty one. An optional workspace
 argument seeds a new registry only. The process runs in the foreground by default; `--background`
 detaches it on Windows and writes `host.log` in the state directory. No OS service is installed.
 `serve` remains a foreground alias. `stop` shuts down the host and all agents without removing
@@ -125,10 +126,10 @@ conformance or validate every model/runtime capability. Real runtime checks requ
 Copilot account and disposable workspaces; normal CI does not invoke inference.
 
 The source repository is public at
-[spec-works/RepoAgentHost](https://github.com/spec-works/RepoAgentHost). Hosting under Spec-Works
+[spec-works/RepoYak](https://github.com/spec-works/RepoYak). Hosting under Spec-Works
 does not imply a published registry entry or public release.
 
-[NuGet-tool packaging](nuget-tool.md) builds `SpecWorks.RepoAgentHost.Cli` with command `rahcli`,
+[NuGet-tool packaging](nuget-tool.md) builds `SpecWorks.RepoYak.Cli` with command `repoyak`,
 using self-contained Windows and macOS x64/ARM64 packages and a .NET 10 manifest. Disposable installation,
 runtime handshake, and host HTTP checks gate the manually requested publication job. The
 mechanism does not establish a NuGet.org release. macOS runs in the foreground; `--background`

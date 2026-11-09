@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\RepoAgentHost.Api\RepoAgentHost.Api.csproj" />
+    <ProjectReference Include="..\..\src\RepoYak.Api\RepoYak.Api.csproj" />
   </ItemGroup>
 
 </Project>

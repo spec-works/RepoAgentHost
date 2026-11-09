@@ -3,7 +3,7 @@ using System.IO.Pipes;
 using System.Reflection;
 using System.Text.Json;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public static class HostCommands
 {

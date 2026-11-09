@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using A2A;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed class AgentRegistry : IHostedService, IAsyncDisposable
 {
@@ -160,7 +160,7 @@ public sealed class AgentRegistry : IHostedService, IAsyncDisposable
         return new
         {
             specVersion = "1.0",
-            host = new { identifier = $"urn:agentdock:host:{_hostId}", displayName = "RepoAgentHost" },
+            host = new { identifier = $"urn:agentdock:host:{_hostId}", displayName = "RepoYak" },
             entries = _agents.Values.Where(a => a.Status == "ready" && members.Contains(a.Registration.Id))
                 .OrderBy(a => a.Registration.Id).Select(a => new
                 {

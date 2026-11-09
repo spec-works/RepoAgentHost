@@ -1,6 +1,6 @@
 using A2A;
 
-namespace RepoAgentHost.Api;
+namespace RepoYak.Api;
 
 public sealed class RepositoryAgentHandler(IAgentRuntime agent, ILogger<RepositoryAgentHandler> logger) : IAgentHandler
 {

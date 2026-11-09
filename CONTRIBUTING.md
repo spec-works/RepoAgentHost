@@ -1,7 +1,8 @@
-# Contributing to RepoAgentHost
+# Contributing to RepoYak
 
-RepoAgentHost is a Spec-Works project, currently hosted publicly under `darrelmiller`.
-Repository access, public release, and organisation transfer are separate decisions.
+RepoYak is a Spec-Works project, hosted publicly at `spec-works/RepoYak`.
+The product, CLI, package, and repository use the RepoYak name. Package publication is gated
+separately from source changes by the release workflow.
 
 ## Specification-first changes
 
@@ -15,7 +16,7 @@ behaviour changes. Describe intentional deviations and limitations explicitly.
 With the .NET 10 SDK, from the repository root:
 
 ```powershell
-dotnet test .\RepoAgentHost.sln
+dotnet test .\RepoYak.sln
 git diff --check
 ```
 

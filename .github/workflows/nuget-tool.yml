@@ -39,11 +39,11 @@ jobs:
           $physicalTemp = & /bin/sh -c 'cd "${TMPDIR:-/tmp}" && pwd -P'
           if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the physical temporary directory.' }
           $env:TMPDIR = $physicalTemp.TrimEnd('/') + '/'
-          dotnet test ./RepoAgentHost.sln --configuration Release
+          dotnet test ./RepoYak.sln --configuration Release
       - name: Pack Windows and macOS tools
         env:
           PACKAGE_VERSION: ${{ inputs.version }}
-        run: dotnet pack ./src/RepoAgentHost.Api/RepoAgentHost.Api.csproj --configuration Release -p:Version=$env:PACKAGE_VERSION --output ./artifacts/packages
+        run: dotnet pack ./src/RepoYak.Api/RepoYak.Api.csproj --configuration Release -p:Version=$env:PACKAGE_VERSION --output ./artifacts/packages
       - uses: actions/upload-artifact@v4
         with:
           name: nuget-tool
@@ -101,8 +101,8 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
             throw 'Configure NUGET_API_KEY in the protected nuget environment.'
           }
-          foreach ($id in @('SpecWorks.RepoAgentHost.Cli.win-x64', 'SpecWorks.RepoAgentHost.Cli.win-arm64',
-              'SpecWorks.RepoAgentHost.Cli.osx-x64', 'SpecWorks.RepoAgentHost.Cli.osx-arm64', 'SpecWorks.RepoAgentHost.Cli')) {
+          foreach ($id in @('SpecWorks.RepoYak.Cli.win-x64', 'SpecWorks.RepoYak.Cli.win-arm64',
+              'SpecWorks.RepoYak.Cli.osx-x64', 'SpecWorks.RepoYak.Cli.osx-arm64', 'SpecWorks.RepoYak.Cli')) {
             $package = ".\artifacts\packages\$id.$env:PACKAGE_VERSION.nupkg"
             dotnet nuget push $package --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
             if ($LASTEXITCODE -ne 0) { throw "Publishing $id failed ($LASTEXITCODE)." }
